@@ -1,0 +1,20 @@
+# Cloudflare Worker конфигурация
+# Документация: https://developers.cloudflare.com/workers/wrangler/configuration/
+
+name = "chatmanager-lead-worker"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+
+# Логи видны в: Dashboard → Workers → твой Worker → Logs
+[observability]
+enabled = true
+
+# Секреты НЕ пишутся сюда. Они задаются командой:
+#   npx wrangler secret put MAKE_WEBHOOK_URL
+#   npx wrangler secret put FB_PIXEL_ID
+#   npx wrangler secret put FB_ACCESS_TOKEN
+#   npx wrangler secret put ALLOWED_ORIGIN
+
+# Если нужны публичные переменные (не секреты) — раскомментируй:
+# [vars]
+# EXAMPLE = "value"

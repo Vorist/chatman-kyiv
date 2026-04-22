@@ -1,0 +1,1408 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Чат-менеджер в офис — Киев | Работа в команде</title>
+  <meta name="description" content="Ищем чат-менеджеров в офис в Киеве. Ставка + %, оплачиваемая стажировка 14 дней, релокейт за наш счёт. Без микроменеджмента." />
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+  <!-- Canonical (замени на свой домен) -->
+  <link rel="canonical" href="https://YOUR-DOMAIN.com/" />
+
+  <!-- Open Graph (для Facebook/Telegram/LinkedIn превью) -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Чат-менеджер в офис — Киев" />
+  <meta property="og:description" content="Ставка + %, средний чек новичка от $3 700. Релокейт и обучение за наш счёт." />
+  <meta property="og:image" content="https://YOUR-DOMAIN.com/og-image.jpg" />
+  <meta property="og:url" content="https://YOUR-DOMAIN.com/" />
+  <meta property="og:locale" content="ru_RU" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Чат-менеджер в офис — Киев" />
+  <meta name="twitter:description" content="Ставка + %, релокейт за наш счёт." />
+  <meta name="twitter:image" content="https://YOUR-DOMAIN.com/og-image.jpg" />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300..800&family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Meta Pixel placeholder -->
+  <!-- Вставь свой Pixel ID в PIXEL_ID ниже -->
+  <script>
+    !function(f,b,e,v,n,t,s)
+    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+    n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];
+    s.parentNode.insertBefore(t,s)}(window, document,'script',
+    'https://connect.facebook.net/en_US/fbevents.js');
+    // fbq('init', 'PIXEL_ID');
+    // fbq('track', 'PageView');
+  </script>
+
+  <style>
+    /* ============================================
+       DESIGN TOKENS
+       ============================================ */
+    :root {
+      --bg: #FAF8F3;
+      --bg-elevated: #FFFFFF;
+      --ink: #0F0F0F;
+      --ink-soft: #1E1B18;
+      --muted: #6B6661;
+      --line: #E8E4DB;
+      --line-strong: #D4CEC2;
+      --accent: #FF5A1F;
+      --accent-hover: #E8481A;
+      --accent-soft: #FFE6DC;
+      --success: #0F7938;
+      --success-bg: #E8F5EC;
+      --error: #C02626;
+      --error-bg: #FCE8E8;
+
+      --font-display: 'Bricolage Grotesque', ui-sans-serif, system-ui, sans-serif;
+      --font-body: 'Geist', ui-sans-serif, system-ui, sans-serif;
+
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --radius-xl: 28px;
+
+      --shadow-sm: 0 1px 2px rgba(15,15,15,0.04);
+      --shadow-md: 0 4px 16px rgba(15,15,15,0.06);
+      --shadow-lg: 0 20px 60px -20px rgba(15,15,15,0.15);
+
+      --ease: cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    /* ============================================
+       RESET
+       ============================================ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+    body {
+      font-family: var(--font-body);
+      font-size: 16px;
+      line-height: 1.55;
+      color: var(--ink);
+      background: var(--bg);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      overflow-x: hidden;
+    }
+    img { max-width: 100%; display: block; }
+    button, input, select, textarea { font: inherit; color: inherit; }
+    button { cursor: pointer; border: none; background: none; }
+    a { color: inherit; text-decoration: none; }
+
+    /* ============================================
+       LAYOUT PRIMITIVES
+       ============================================ */
+    .container {
+      width: 100%;
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    section { position: relative; }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-body);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .eyebrow::before {
+      content: '';
+      width: 18px;
+      height: 1px;
+      background: var(--accent);
+    }
+
+    /* ============================================
+       HEADER (minimal)
+       ============================================ */
+    .site-header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(250, 248, 243, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid transparent;
+      transition: border-color 0.3s var(--ease);
+    }
+    .site-header.scrolled { border-bottom-color: var(--line); }
+    .site-header .container {
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .logo {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 20px;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .logo-dot {
+      width: 10px;
+      height: 10px;
+      background: var(--accent);
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .header-cta {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: color 0.2s var(--ease);
+    }
+    .header-cta:hover { color: var(--ink); }
+    .header-cta .pulse {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+      position: relative;
+    }
+    .header-cta .pulse::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background: var(--success);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 0.6; }
+      100% { transform: scale(2.5); opacity: 0; }
+    }
+
+    /* ============================================
+       HERO
+       ============================================ */
+    .hero {
+      padding: 48px 0 100px;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero-decoration {
+      position: absolute;
+      top: 20%;
+      right: -150px;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, var(--accent-soft) 0%, transparent 70%);
+      filter: blur(40px);
+      z-index: 0;
+      pointer-events: none;
+      opacity: 0.7;
+    }
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 80px;
+      align-items: center;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-left .eyebrow {
+      animation: fadeInUp 0.6s var(--ease) both;
+      animation-delay: 0.05s;
+    }
+
+    .hero-title {
+      font-family: var(--font-display);
+      font-weight: 500;
+      font-size: clamp(42px, 6vw, 82px);
+      line-height: 0.98;
+      letter-spacing: -0.035em;
+      color: var(--ink);
+      margin: 20px 0 28px;
+      animation: fadeInUp 0.7s var(--ease) both;
+      animation-delay: 0.15s;
+    }
+    .hero-title .accent {
+      font-style: italic;
+      font-weight: 400;
+      color: var(--accent);
+      position: relative;
+      display: inline-block;
+    }
+    .hero-title .accent::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      bottom: 0.08em;
+      width: 100%;
+      height: 0.1em;
+      background: var(--accent);
+      opacity: 0.2;
+      border-radius: 4px;
+    }
+
+    .hero-subtitle {
+      font-size: 19px;
+      line-height: 1.55;
+      color: var(--ink-soft);
+      max-width: 520px;
+      margin-bottom: 16px;
+      animation: fadeInUp 0.7s var(--ease) both;
+      animation-delay: 0.25s;
+    }
+    .hero-description {
+      font-size: 16px;
+      line-height: 1.6;
+      color: var(--muted);
+      max-width: 540px;
+      margin-bottom: 36px;
+      animation: fadeInUp 0.7s var(--ease) both;
+      animation-delay: 0.3s;
+    }
+
+    .bullets {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      animation: fadeInUp 0.7s var(--ease) both;
+      animation-delay: 0.4s;
+    }
+    .bullet {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+    .bullet-icon {
+      flex-shrink: 0;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--ink);
+      color: var(--bg);
+      display: grid;
+      place-items: center;
+      font-size: 14px;
+      font-weight: 600;
+      margin-top: 1px;
+    }
+    .bullet strong { font-weight: 600; color: var(--ink); }
+    .bullet .bullet-meta {
+      display: block;
+      color: var(--muted);
+      font-size: 14px;
+      margin-top: 2px;
+    }
+
+    /* ============================================
+       FORM CARD
+       ============================================ */
+    .form-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-xl);
+      padding: 36px 32px;
+      box-shadow: var(--shadow-lg);
+      position: relative;
+      animation: fadeInUp 0.8s var(--ease) both;
+      animation-delay: 0.2s;
+    }
+    .form-card::before {
+      content: '';
+      position: absolute;
+      top: -1px;
+      left: 32px;
+      right: 32px;
+      height: 3px;
+      background: var(--accent);
+      border-radius: 0 0 4px 4px;
+    }
+    .form-badge {
+      position: absolute;
+      top: -14px;
+      right: 28px;
+      background: var(--ink);
+      color: var(--bg);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 6px 12px;
+      border-radius: 100px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .form-badge-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+    }
+    .form-card h2 {
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: 28px;
+      letter-spacing: -0.02em;
+      margin-bottom: 6px;
+    }
+    .form-card .form-sub {
+      color: var(--muted);
+      font-size: 14px;
+      margin-bottom: 24px;
+    }
+    .form-row {
+      margin-bottom: 14px;
+    }
+    .form-label {
+      display: block;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--muted);
+      margin-bottom: 6px;
+      letter-spacing: 0.02em;
+    }
+    .form-input,
+    .form-select {
+      width: 100%;
+      padding: 13px 14px;
+      background: var(--bg);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      font-size: 15px;
+      color: var(--ink);
+      transition: all 0.18s var(--ease);
+      outline: none;
+    }
+    .form-input::placeholder { color: #A09A92; }
+    .form-input:focus,
+    .form-select:focus {
+      border-color: var(--ink);
+      background: var(--bg-elevated);
+      box-shadow: 0 0 0 4px rgba(15,15,15,0.05);
+    }
+    /* remove number arrows */
+    .form-input[type=number]::-webkit-inner-spin-button,
+    .form-input[type=number]::-webkit-outer-spin-button {
+      -webkit-appearance: none; margin: 0;
+    }
+    .form-input[type=number] { -moz-appearance: textfield; }
+
+    .form-select {
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1.5L6 6.5L11 1.5' stroke='%236B6661' stroke-width='1.5' fill='none' stroke-linecap='round'/></svg>");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      padding-right: 40px;
+    }
+
+    .form-checkbox {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px 0 6px;
+      font-size: 13px;
+      line-height: 1.45;
+      color: var(--muted);
+      cursor: pointer;
+      user-select: none;
+    }
+    .form-checkbox input[type="checkbox"] {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      border: 1.5px solid var(--line-strong);
+      border-radius: 5px;
+      flex-shrink: 0;
+      cursor: pointer;
+      position: relative;
+      margin-top: 1px;
+      transition: all 0.15s var(--ease);
+    }
+    .form-checkbox input[type="checkbox"]:checked {
+      background: var(--ink);
+      border-color: var(--ink);
+    }
+    .form-checkbox input[type="checkbox"]:checked::after {
+      content: '';
+      position: absolute;
+      left: 5px;
+      top: 1px;
+      width: 5px;
+      height: 10px;
+      border: solid var(--bg);
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg);
+    }
+
+    .form-submit {
+      width: 100%;
+      background: var(--ink);
+      color: var(--bg);
+      font-size: 15px;
+      font-weight: 600;
+      padding: 16px 20px;
+      border-radius: 12px;
+      margin-top: 12px;
+      transition: all 0.2s var(--ease);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      letter-spacing: 0.01em;
+    }
+    .form-submit:hover:not(:disabled) {
+      background: var(--accent);
+      transform: translateY(-1px);
+      box-shadow: 0 8px 24px -6px rgba(255,90,31,0.4);
+    }
+    .form-submit:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+    }
+    .form-submit svg {
+      transition: transform 0.2s var(--ease);
+    }
+    .form-submit:hover:not(:disabled) svg { transform: translateX(3px); }
+
+    .form-legal {
+      text-align: center;
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 12px;
+      line-height: 1.5;
+    }
+
+    .form-success {
+      display: none;
+      padding: 40px 16px;
+      text-align: center;
+    }
+    .form-success.active { display: block; animation: fadeIn 0.5s var(--ease); }
+    .form-success-icon {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: var(--success-bg);
+      color: var(--success);
+      display: grid;
+      place-items: center;
+      margin: 0 auto 18px;
+      font-size: 30px;
+    }
+    .form-success h3 {
+      font-family: var(--font-display);
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .form-success p {
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.55;
+    }
+
+    /* ============================================
+       MARQUEE / REVIEWS
+       ============================================ */
+    .reviews {
+      padding: 80px 0;
+      background: var(--ink);
+      color: var(--bg);
+      overflow: hidden;
+      position: relative;
+    }
+    .reviews .container {
+      margin-bottom: 40px;
+      text-align: center;
+    }
+    .reviews .eyebrow { color: rgba(250,248,243,0.6); }
+    .reviews .eyebrow::before { background: var(--accent); }
+    .reviews-title {
+      font-family: var(--font-display);
+      font-weight: 500;
+      font-size: clamp(32px, 4.5vw, 52px);
+      line-height: 1.05;
+      letter-spacing: -0.025em;
+      margin: 16px 0 10px;
+    }
+    .reviews-sub {
+      color: rgba(250,248,243,0.6);
+      font-size: 16px;
+      max-width: 500px;
+      margin: 0 auto;
+    }
+
+    .marquee {
+      display: flex;
+      gap: 20px;
+      animation: scroll 40s linear infinite;
+      width: max-content;
+    }
+    .marquee:hover { animation-play-state: paused; }
+
+    .marquee-card {
+      flex-shrink: 0;
+      width: 280px;
+      height: 380px;
+      background: rgba(250,248,243,0.04);
+      border: 1px solid rgba(250,248,243,0.1);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      position: relative;
+      transition: all 0.3s var(--ease);
+    }
+    .marquee-card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .marquee-card .placeholder {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      place-items: center;
+      color: rgba(250,248,243,0.5);
+      font-size: 13px;
+      text-align: center;
+      padding: 20px;
+      line-height: 1.5;
+    }
+    .marquee-card .placeholder code {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 2px 8px;
+      background: rgba(250,248,243,0.08);
+      border-radius: 4px;
+      font-size: 11px;
+      color: rgba(250,248,243,0.7);
+    }
+    .marquee-card:hover {
+      background: rgba(250,248,243,0.08);
+      border-color: rgba(250,248,243,0.2);
+      transform: translateY(-4px);
+    }
+
+    @keyframes scroll {
+      from { transform: translateX(0); }
+      to { transform: translateX(calc(-50% - 10px)); }
+    }
+
+    .marquee-wrapper {
+      position: relative;
+    }
+    .marquee-wrapper::before,
+    .marquee-wrapper::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 120px;
+      z-index: 2;
+      pointer-events: none;
+    }
+    .marquee-wrapper::before {
+      left: 0;
+      background: linear-gradient(to right, var(--ink), transparent);
+    }
+    .marquee-wrapper::after {
+      right: 0;
+      background: linear-gradient(to left, var(--ink), transparent);
+    }
+
+    /* ============================================
+       STATS
+       ============================================ */
+    .stats {
+      padding: 120px 0;
+    }
+    .stats-header {
+      max-width: 720px;
+      margin-bottom: 64px;
+    }
+    .stats-title {
+      font-family: var(--font-display);
+      font-weight: 500;
+      font-size: clamp(36px, 5vw, 64px);
+      line-height: 1.02;
+      letter-spacing: -0.03em;
+      margin: 18px 0 0;
+    }
+    .stats-title em {
+      font-style: italic;
+      font-weight: 400;
+      color: var(--accent);
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      align-items: stretch;
+    }
+    .stat-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      padding: 36px 32px;
+      position: relative;
+      transition: all 0.3s var(--ease);
+      overflow: hidden;
+    }
+    .stat-card:hover {
+      border-color: var(--ink);
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-md);
+    }
+    .stat-card::before {
+      content: attr(data-num);
+      position: absolute;
+      top: 20px;
+      right: 24px;
+      font-family: var(--font-body);
+      font-size: 12px;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.05em;
+    }
+    .stat-value {
+      font-family: var(--font-display);
+      font-weight: 500;
+      font-size: clamp(48px, 6vw, 80px);
+      line-height: 1;
+      letter-spacing: -0.035em;
+      color: var(--ink);
+      margin: 40px 0 8px;
+    }
+    .stat-label {
+      font-size: 15px;
+      color: var(--ink-soft);
+      font-weight: 500;
+    }
+    .stat-desc {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+    .stat-card.accent {
+      background: var(--ink);
+      color: var(--bg);
+      border-color: var(--ink);
+    }
+    .stat-card.accent::before { color: rgba(250,248,243,0.5); }
+    .stat-card.accent .stat-value { color: var(--bg); }
+    .stat-card.accent .stat-label { color: var(--bg); }
+    .stat-card.accent .stat-desc { color: rgba(250,248,243,0.6); }
+    .stat-card.accent:hover { transform: translateY(-4px); }
+
+    /* ============================================
+       FAQ
+       ============================================ */
+    .faq {
+      padding: 40px 0 120px;
+    }
+    .faq-layout {
+      display: grid;
+      grid-template-columns: 0.8fr 1.2fr;
+      gap: 80px;
+      align-items: start;
+    }
+    .faq-title {
+      font-family: var(--font-display);
+      font-weight: 500;
+      font-size: clamp(36px, 5vw, 56px);
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+      margin: 16px 0 20px;
+    }
+    .faq-title em {
+      font-style: italic;
+      font-weight: 400;
+      color: var(--accent);
+    }
+    .faq-intro {
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.6;
+      max-width: 360px;
+    }
+    .faq-intro a {
+      color: var(--ink);
+      border-bottom: 1px solid var(--ink);
+      transition: all 0.2s var(--ease);
+    }
+    .faq-intro a:hover { color: var(--accent); border-color: var(--accent); }
+
+    .faq-list { display: flex; flex-direction: column; }
+    .faq-item {
+      border-top: 1px solid var(--line);
+      padding: 4px 0;
+    }
+    .faq-item:last-child { border-bottom: 1px solid var(--line); }
+    .faq-question {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      padding: 24px 0;
+      text-align: left;
+      font-family: var(--font-display);
+      font-weight: 500;
+      font-size: 19px;
+      letter-spacing: -0.01em;
+      color: var(--ink);
+      transition: color 0.2s var(--ease);
+    }
+    .faq-question:hover { color: var(--accent); }
+    .faq-icon {
+      flex-shrink: 0;
+      width: 32px;
+      height: 32px;
+      border: 1px solid var(--line-strong);
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      position: relative;
+      transition: all 0.25s var(--ease);
+    }
+    .faq-icon::before,
+    .faq-icon::after {
+      content: '';
+      position: absolute;
+      background: var(--ink);
+      border-radius: 2px;
+      transition: all 0.25s var(--ease);
+    }
+    .faq-icon::before { width: 12px; height: 1.5px; }
+    .faq-icon::after { width: 1.5px; height: 12px; }
+    .faq-item.active .faq-icon {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    .faq-item.active .faq-icon::before,
+    .faq-item.active .faq-icon::after { background: var(--bg); }
+    .faq-item.active .faq-icon::after { transform: rotate(90deg); opacity: 0; }
+    .faq-answer {
+      display: grid;
+      grid-template-rows: 0fr;
+      transition: grid-template-rows 0.35s var(--ease);
+    }
+    .faq-answer-inner {
+      overflow: hidden;
+      min-height: 0;
+    }
+    .faq-answer-content {
+      padding: 0 0 24px;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.65;
+      max-width: 620px;
+    }
+    .faq-item.active .faq-answer {
+      grid-template-rows: 1fr;
+    }
+
+    /* ============================================
+       FOOTER
+       ============================================ */
+    .site-footer {
+      background: var(--ink);
+      color: rgba(250,248,243,0.7);
+      padding: 48px 0 32px;
+      font-size: 13px;
+    }
+    .footer-grid {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .site-footer .logo { color: var(--bg); font-size: 18px; }
+    .site-footer a { color: rgba(250,248,243,0.7); transition: color 0.2s; }
+    .site-footer a:hover { color: var(--bg); }
+
+    /* ============================================
+       CUSTOM ALERT
+       ============================================ */
+    .alert-toast {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-120%);
+      background: var(--bg-elevated);
+      color: var(--ink);
+      padding: 14px 20px 14px 16px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow-lg);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      z-index: 1000;
+      transition: transform 0.4s var(--ease);
+      max-width: 420px;
+      font-size: 14px;
+    }
+    .alert-toast.show { transform: translateX(-50%) translateY(0); }
+    .alert-toast.error {
+      background: var(--error-bg);
+      border-color: #F5C2C2;
+      color: var(--error);
+    }
+    .alert-toast-icon {
+      flex-shrink: 0;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--error);
+      color: var(--error-bg);
+      display: grid;
+      place-items: center;
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    /* ============================================
+       ANIMATIONS
+       ============================================ */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    /* ============================================
+       RESPONSIVE
+       ============================================ */
+    @media (max-width: 960px) {
+      .hero-grid { grid-template-columns: 1fr; gap: 48px; }
+      .form-card { order: -1; }
+      .hero-left { text-align: left; }
+      .stats-grid { grid-template-columns: 1fr; }
+      .faq-layout { grid-template-columns: 1fr; gap: 40px; }
+    }
+    @media (max-width: 640px) {
+      .container { padding: 0 20px; }
+      .hero { padding: 32px 0 60px; }
+      .stats { padding: 80px 0; }
+      .faq { padding: 20px 0 80px; }
+      .reviews { padding: 60px 0; }
+      .form-card { padding: 28px 22px; }
+      .marquee-card { width: 240px; height: 320px; }
+      .hero-subtitle { font-size: 17px; }
+      .stat-card { padding: 28px 24px; }
+      .faq-question { font-size: 17px; padding: 20px 0; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ============================================
+       HEADER
+       ============================================ -->
+  <header class="site-header" id="siteHeader">
+    <div class="container">
+      <a href="#" class="logo">
+        <span class="logo-dot"></span>
+        Команда&nbsp;エレナ
+      </a>
+      <a href="#form" class="header-cta">
+        <span class="pulse"></span>
+        Набор открыт
+      </a>
+    </div>
+  </header>
+
+  <!-- ============================================
+       HERO
+       ============================================ -->
+  <section class="hero">
+    <div class="hero-decoration"></div>
+    <div class="container">
+      <div class="hero-grid">
+        <div class="hero-left">
+          <span class="eyebrow">Киев · Офис · Полная занятость</span>
+
+          <h1 class="hero-title">
+            Чат-менеджер<br>в&nbsp;офис <span class="accent">Киев</span>
+          </h1>
+
+          <p class="hero-subtitle">
+            Адекватная команда, со здравыми тимлидами и&nbsp;понятными задачами.
+          </p>
+
+          <p class="hero-description">
+            Ищем своих людей. Без скучных ежедневных брифов и&nbsp;микроменеджмента&nbsp;— всему научим с&nbsp;нуля. А&nbsp;для опытных у&nbsp;нас есть особые условия.
+          </p>
+
+          <ul class="bullets">
+            <li class="bullet">
+              <span class="bullet-icon">01</span>
+              <span>
+                <strong>Ставка + %</strong>
+                <span class="bullet-meta">Средний чек у&nbsp;новичков стартует от&nbsp;$3&nbsp;700</span>
+              </span>
+            </li>
+            <li class="bullet">
+              <span class="bullet-icon">02</span>
+              <span>
+                <strong>Берём на&nbsp;себя ваш релокейт в&nbsp;Киев</strong>
+                <span class="bullet-meta">Билеты + жильё на&nbsp;старт</span>
+              </span>
+            </li>
+            <li class="bullet">
+              <span class="bullet-icon">03</span>
+              <span>
+                <strong>Качественное обучение и&nbsp;опытный наставник</strong>
+                <span class="bullet-meta">Оплачиваемая стажировка&nbsp;14&nbsp;дней</span>
+              </span>
+            </li>
+          </ul>
+        </div>
+
+        <div class="form-card" id="form">
+          <div class="form-badge">
+            <span class="form-badge-dot"></span>
+            Анкета
+          </div>
+
+          <div id="formWrapper">
+            <h2>Заполните анкету</h2>
+            <p class="form-sub">Мы свяжемся в&nbsp;течение&nbsp;30&nbsp;минут</p>
+
+            <form id="leadForm" novalidate>
+              <div class="form-row">
+                <label class="form-label" for="name">Ваше имя</label>
+                <input type="text" id="name" name="name" class="form-input" placeholder="Иван Иванов" required autocomplete="given-name">
+              </div>
+
+              <div class="form-row">
+                <label class="form-label" for="age">Сколько вам лет</label>
+                <input type="number" id="age" name="age" class="form-input" min="16" max="99" placeholder="18" required>
+              </div>
+
+              <div class="form-row">
+                <label class="form-label" for="phone">Номер телефона</label>
+                <input type="tel" id="phone" name="phone" class="form-input" placeholder="+38 (000) 000-00-00" required autocomplete="tel">
+              </div>
+
+              <div class="form-row">
+                <label class="form-label" for="telegram">Ник в&nbsp;Телеграме</label>
+                <input type="text" id="telegram" name="telegram" class="form-input" placeholder="@yournikname" required>
+              </div>
+
+              <div class="form-row">
+                <label class="form-label" for="readiness">Когда готовы встретиться / Переехать?</label>
+                <select id="readiness" name="readiness" class="form-select" required>
+                  <option value="" disabled selected>Выберите вариант</option>
+                  <option value="2_days">В течение 2&nbsp;дней</option>
+                  <option value="week">В течение недели</option>
+                  <option value="month">В течение месяца</option>
+                </select>
+              </div>
+
+              <label class="form-checkbox">
+                <input type="checkbox" id="consent" name="consent" required>
+                <span>Я&nbsp;понимаю, что оставляю отклик на&nbsp;офлайн-вакансию с&nbsp;полной занятостью, это не&nbsp;удалённая работа.</span>
+              </label>
+
+              <button type="submit" class="form-submit" id="submitBtn">
+                <span class="btn-text">Отправить заявку</span>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M3 8H13M13 8L8 3M13 8L8 13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+
+              <p class="form-legal">
+                Нажимая кнопку, вы соглашаетесь с&nbsp;обработкой персональных данных
+              </p>
+            </form>
+          </div>
+
+          <div class="form-success" id="formSuccess">
+            <div class="form-success-icon">✓</div>
+            <h3>Заявка отправлена</h3>
+            <p>Наш HR свяжется с&nbsp;вами в&nbsp;течение&nbsp;30&nbsp;минут в&nbsp;Telegram или по&nbsp;телефону.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================
+       REVIEWS / MARQUEE
+       ============================================ -->
+  <section class="reviews">
+    <div class="container">
+      <span class="eyebrow">Социальное доказательство</span>
+      <h2 class="reviews-title">Отзывы нашей<br>команды</h2>
+      <p class="reviews-sub">Скриншоты реальных переписок и&nbsp;отзывы наших сотрудников</p>
+    </div>
+
+    <div class="marquee-wrapper">
+      <div class="marquee" id="marquee">
+        <!-- Скриншоты подтягиваются из /images/. Если файл не найден — показывается placeholder. -->
+        <!-- Добавь больше карточек копированием одной из них. -->
+
+        <div class="marquee-card">
+          <img src="/images/review-1.jpg" alt="Отзыв #1" onerror="this.outerHTML='<div class=\'placeholder\'>📸 review-1.jpg<br><code>/images/review-1.jpg</code></div>'">
+        </div>
+        <div class="marquee-card">
+          <img src="/images/review-2.jpg" alt="Отзыв #2" onerror="this.outerHTML='<div class=\'placeholder\'>📸 review-2.jpg<br><code>/images/review-2.jpg</code></div>'">
+        </div>
+        <div class="marquee-card">
+          <img src="/images/review-3.jpg" alt="Отзыв #3" onerror="this.outerHTML='<div class=\'placeholder\'>📸 review-3.jpg<br><code>/images/review-3.jpg</code></div>'">
+        </div>
+        <div class="marquee-card">
+          <img src="/images/review-4.jpg" alt="Отзыв #4" onerror="this.outerHTML='<div class=\'placeholder\'>📸 review-4.jpg<br><code>/images/review-4.jpg</code></div>'">
+        </div>
+        <div class="marquee-card">
+          <img src="/images/review-5.jpg" alt="Отзыв #5" onerror="this.outerHTML='<div class=\'placeholder\'>📸 review-5.jpg<br><code>/images/review-5.jpg</code></div>'">
+        </div>
+
+        <!-- Дубль набора для бесконечной прокрутки (не удаляй) -->
+        <div class="marquee-card">
+          <img src="/images/review-1.jpg" alt="" onerror="this.outerHTML='<div class=\'placeholder\'>📸 review-1.jpg<br><code>/images/review-1.jpg</code></div>'">
+        </div>
+        <div class="marquee-card">
+          <img src="/images/review-2.jpg" alt="" onerror="this.outerHTML='<div class=\'placeholder\'>📸 review-2.jpg<br><code>/images/review-2.jpg</code></div>'">
+        </div>
+        <div class="marquee-card">
+          <img src="/images/review-3.jpg" alt="" onerror="this.outerHTML='<div class=\'placeholder\'>📸 review-3.jpg<br><code>/images/review-3.jpg</code></div>'">
+        </div>
+        <div class="marquee-card">
+          <img src="/images/review-4.jpg" alt="" onerror="this.outerHTML='<div class=\'placeholder\'>📸 review-4.jpg<br><code>/images/review-4.jpg</code></div>'">
+        </div>
+        <div class="marquee-card">
+          <img src="/images/review-5.jpg" alt="" onerror="this.outerHTML='<div class=\'placeholder\'>📸 review-5.jpg<br><code>/images/review-5.jpg</code></div>'">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================
+       STATS
+       ============================================ -->
+  <section class="stats">
+    <div class="container">
+      <div class="stats-header">
+        <span class="eyebrow">Цифры, которые имеют значение</span>
+        <h2 class="stats-title">Почему выбирают <em>нас</em></h2>
+      </div>
+
+      <div class="stats-grid">
+        <article class="stat-card" data-num="01 / 03">
+          <div class="stat-value">150+</div>
+          <div class="stat-label">Человек в&nbsp;команде</div>
+          <div class="stat-desc">Из&nbsp;них&nbsp;40%&nbsp;— тимлиды и&nbsp;наставники</div>
+        </article>
+
+        <article class="stat-card accent" data-num="02 / 03">
+          <div class="stat-value">14 дней</div>
+          <div class="stat-label">Длится стажировка</div>
+          <div class="stat-desc">Оплачивается с&nbsp;первого дня</div>
+        </article>
+
+        <article class="stat-card" data-num="03 / 03">
+          <div class="stat-value">$3 700+</div>
+          <div class="stat-label">Средний чек новичка</div>
+          <div class="stat-desc">После&nbsp;14&nbsp;дней стажировки</div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================
+       FAQ
+       ============================================ -->
+  <section class="faq">
+    <div class="container">
+      <div class="faq-layout">
+        <div>
+          <span class="eyebrow">FAQ</span>
+          <h2 class="faq-title">Частые <em>вопросы</em></h2>
+          <p class="faq-intro">
+            Не&nbsp;нашли ответ? Напишите напрямую в&nbsp;<a href="#form">форму анкеты</a>&nbsp;— HR перезвонит и&nbsp;всё расскажет.
+          </p>
+        </div>
+
+        <div class="faq-list">
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              <span>Как считается зарплата?</span>
+              <span class="faq-icon"></span>
+            </button>
+            <div class="faq-answer">
+              <div class="faq-answer-inner">
+                <div class="faq-answer-content">
+                  Зарплата состоит из&nbsp;фиксированной ставки и&nbsp;процента от&nbsp;выполненных планов. Прозрачная система&nbsp;KPI, которую вы&nbsp;видите каждый день.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              <span>Обязателен ли&nbsp;опыт работы?</span>
+              <span class="faq-icon"></span>
+            </button>
+            <div class="faq-answer">
+              <div class="faq-answer-inner">
+                <div class="faq-answer-content">
+                  Нет, мы&nbsp;предоставляем полное обучение с&nbsp;нуля. Главное&nbsp;— ваше желание учиться и&nbsp;развиваться.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              <span>Я&nbsp;из&nbsp;другого города, как быть?</span>
+              <span class="faq-icon"></span>
+            </button>
+            <div class="faq-answer">
+              <div class="faq-answer-inner">
+                <div class="faq-answer-content">
+                  Мы&nbsp;приветствуем кандидатов из&nbsp;других городов. Оплачиваем билеты и&nbsp;помогаем с&nbsp;размещением на&nbsp;первый месяц работы.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
+              <span>Как проходит стажировка?</span>
+              <span class="faq-icon"></span>
+            </button>
+            <div class="faq-answer">
+              <div class="faq-answer-inner">
+                <div class="faq-answer-content">
+                  Стажировка длится до&nbsp;14&nbsp;дней в&nbsp;офисе под руководством опытного тимлида. Этот период полностью оплачивается.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================
+       FOOTER
+       ============================================ -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <a href="#" class="logo">
+          <span class="logo-dot"></span>
+          Команда&nbsp;エレナ
+        </a>
+        <span>© 2026 · Киев, Украина · <a href="#">Политика конфиденциальности</a></span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ============================================
+       CUSTOM ALERT (error toast)
+       ============================================ -->
+  <div class="alert-toast error" id="alertToast">
+    <span class="alert-toast-icon">!</span>
+    <span id="alertText">Ошибка. Попробуйте ещё раз.</span>
+  </div>
+
+  <!-- ============================================
+       SCRIPTS
+       ============================================ -->
+  <script>
+    // ============================================
+    // CONFIG
+    // ============================================
+    const WORKER_URL = 'YOUR_WORKER_NAME'; // замени на URL Cloudflare Worker
+
+    // ============================================
+    // HEADER SCROLL
+    // ============================================
+    const header = document.getElementById('siteHeader');
+    window.addEventListener('scroll', () => {
+      header.classList.toggle('scrolled', window.scrollY > 20);
+    });
+
+    // ============================================
+    // FAQ ACCORDION
+    // ============================================
+    document.querySelectorAll('.faq-question').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const item = btn.parentElement;
+        const isActive = item.classList.contains('active');
+
+        // Закрываем все остальные
+        document.querySelectorAll('.faq-item').forEach(i => {
+          i.classList.remove('active');
+          i.querySelector('.faq-question').setAttribute('aria-expanded', 'false');
+        });
+
+        // Открываем текущий если был закрыт
+        if (!isActive) {
+          item.classList.add('active');
+          btn.setAttribute('aria-expanded', 'true');
+        }
+      });
+    });
+
+    // ============================================
+    // ALERT TOAST
+    // ============================================
+    function showAlert(message, type = 'error') {
+      const toast = document.getElementById('alertToast');
+      document.getElementById('alertText').textContent = message;
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 5000);
+    }
+
+    // ============================================
+    // COOKIE HELPER (для Meta fbp / fbc)
+    // ============================================
+    function getCookie(name) {
+      const v = `; ${document.cookie}`;
+      const parts = v.split(`; ${name}=`);
+      if (parts.length === 2) return parts.pop().split(';').shift();
+      return null;
+    }
+
+    // ============================================
+    // LEAD FORM
+    // ============================================
+    const form = document.getElementById('leadForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const formWrapper = document.getElementById('formWrapper');
+    const formSuccess = document.getElementById('formSuccess');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      // Валидация
+      const name = form.name.value.trim();
+      const age = parseInt(form.age.value, 10);
+      const phone = form.phone.value.trim();
+      const telegram = form.telegram.value.trim();
+      const readiness = form.readiness.value;
+      const consent = form.consent.checked;
+
+      if (!name) return showAlert('Введите имя');
+      if (!age || age < 16 || age > 99) return showAlert('Укажите корректный возраст (16–99)');
+      if (!phone || phone.length < 6) return showAlert('Введите номер телефона');
+      if (!telegram) return showAlert('Укажите ник в Телеграме');
+      if (!readiness) return showAlert('Выберите, когда готовы встретиться');
+      if (!consent) return showAlert('Подтвердите согласие');
+
+      // UI: lock button
+      submitBtn.disabled = true;
+      submitBtn.querySelector('.btn-text').textContent = 'Отправка...';
+
+      const payload = {
+        name, age, phone, telegram, readiness,
+        source: 'landing',
+        url: window.location.href,
+        referrer: document.referrer || null,
+        fbp: getCookie('_fbp'),
+        fbc: getCookie('_fbc'),
+        user_agent: navigator.userAgent,
+        timestamp: Math.floor(Date.now() / 1000)
+      };
+
+      try {
+        // MOCK режим если URL не заменён
+        if (WORKER_URL === 'YOUR_WORKER_NAME') {
+          await new Promise(r => setTimeout(r, 1000));
+          console.log('[MOCK] Payload:', payload);
+          handleSuccess();
+          return;
+        }
+
+        const res = await fetch(WORKER_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) throw new Error('Ошибка сервера: ' + res.status);
+        handleSuccess();
+
+      } catch (err) {
+        console.error(err);
+        submitBtn.disabled = false;
+        submitBtn.querySelector('.btn-text').textContent = 'Отправить заявку';
+        showAlert('Не удалось отправить. Проверьте интернет и попробуйте ещё раз.');
+      }
+    });
+
+    function handleSuccess() {
+      formWrapper.style.display = 'none';
+      formSuccess.classList.add('active');
+
+      // Meta Pixel event
+      if (typeof fbq === 'function') {
+        fbq('track', 'Lead');
+      }
+
+      // Scroll на форму чтобы увидеть успех
+      document.getElementById('form').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    // ============================================
+    // PHONE FORMATTER (light)
+    // ============================================
+    const phoneInput = document.getElementById('phone');
+    phoneInput.addEventListener('input', (e) => {
+      let v = e.target.value.replace(/\D/g, '');
+      if (v.startsWith('38')) v = v.slice(2);
+      let formatted = '+38';
+      if (v.length > 0) formatted += ' (' + v.slice(0, 3);
+      if (v.length >= 3) formatted += ') ' + v.slice(3, 6);
+      if (v.length >= 6) formatted += '-' + v.slice(6, 8);
+      if (v.length >= 8) formatted += '-' + v.slice(8, 10);
+      e.target.value = formatted;
+    });
+
+  </script>
+
+</body>
+</html>
