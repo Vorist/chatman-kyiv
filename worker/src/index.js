@@ -148,7 +148,7 @@ async function sendToCAPI(env, data, request) {
       event_time: data.timestamp || Math.floor(Date.now() / 1000),
       event_source_url: data.url,
       action_source: 'website',
-      event_id: `lead_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+      event_id: data.event_id || `lead_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
       user_data: userData,
       custom_data: {
         content_name: 'Chat Manager Kyiv',

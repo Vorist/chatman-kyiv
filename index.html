@@ -31,8 +31,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300..800&family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-  <!-- Meta Pixel placeholder -->
-  <!-- Вставь свой Pixel ID в PIXEL_ID ниже -->
+  <!-- Meta Pixel Code (CHATI2v1) -->
   <script>
     !function(f,b,e,v,n,t,s)
     {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
@@ -42,9 +41,14 @@
     t.src=v;s=b.getElementsByTagName(e)[0];
     s.parentNode.insertBefore(t,s)}(window, document,'script',
     'https://connect.facebook.net/en_US/fbevents.js');
-    // fbq('init', 'PIXEL_ID');
-    // fbq('track', 'PageView');
+    fbq('init', '2160949541347107');
+    fbq('track', 'PageView');
   </script>
+  <noscript>
+    <img height="1" width="1" style="display:none"
+         src="https://www.facebook.com/tr?id=2160949541347107&ev=PageView&noscript=1"/>
+  </noscript>
+  <!-- End Meta Pixel Code -->
 
   <style>
     /* ============================================
@@ -1504,6 +1508,8 @@
       submitBtn.disabled = true;
       submitBtn.querySelector('.btn-text').textContent = 'Отправка...';
 
+      const eventId = `lead_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+
       const payload = {
         name: name.trim(),
         age: parseInt(age, 10),
@@ -1511,6 +1517,7 @@
         telegram: telegram.trim(),
         readiness,
         source: 'landing',
+        event_id: eventId,
         url: window.location.href,
         referrer: document.referrer || null,
         fbp: getCookie('_fbp'),
@@ -1524,7 +1531,7 @@
         if (WORKER_URL === 'YOUR_WORKER_NAME') {
           await new Promise(r => setTimeout(r, 1000));
           console.log('[MOCK] Payload:', payload);
-          handleSuccess();
+          handleSuccess(eventId);
           return;
         }
 
@@ -1535,7 +1542,7 @@
         });
 
         if (!res.ok) throw new Error('Ошибка сервера: ' + res.status);
-        handleSuccess();
+        handleSuccess(eventId);
 
       } catch (err) {
         console.error(err);
@@ -1545,13 +1552,16 @@
       }
     });
 
-    function handleSuccess() {
+    function handleSuccess(eventId) {
       formWrapper.style.display = 'none';
       formSuccess.classList.add('active');
 
-      // Meta Pixel event
+      // Meta Pixel событие Lead (с event_id для дедупликации с CAPI)
       if (typeof fbq === 'function') {
-        fbq('track', 'Lead');
+        fbq('track', 'Lead', {
+          content_name: 'Chat Manager Kyiv',
+          content_category: 'HR Lead'
+        }, { eventID: eventId });
       }
 
       // Scroll на форму чтобы увидеть успех
