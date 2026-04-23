@@ -9,22 +9,22 @@
   <!-- Favicon -->
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 
-  <!-- Canonical (замени на свой домен) -->
-  <link rel="canonical" href="https://YOUR-DOMAIN.com/" />
+  <!-- Canonical -->
+  <link rel="canonical" href="https://chatman-kyiv.com/" />
 
   <!-- Open Graph (для Facebook/Telegram/LinkedIn превью) -->
   <meta property="og:type" content="website" />
   <meta property="og:title" content="Чат-менеджер в офис — Киев" />
   <meta property="og:description" content="Ставка + %, средний чек новичка от $3 700. Релокейт и обучение за наш счёт." />
-  <meta property="og:image" content="https://YOUR-DOMAIN.com/og-image.jpg" />
-  <meta property="og:url" content="https://YOUR-DOMAIN.com/" />
+  <meta property="og:image" content="https://chatman-kyiv.com/og-image.jpg" />
+  <meta property="og:url" content="https://chatman-kyiv.com/" />
   <meta property="og:locale" content="ru_RU" />
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="Чат-менеджер в офис — Киев" />
   <meta name="twitter:description" content="Ставка + %, релокейт за наш счёт." />
-  <meta name="twitter:image" content="https://YOUR-DOMAIN.com/og-image.jpg" />
+  <meta name="twitter:image" content="https://chatman-kyiv.com/og-image.jpg" />
 
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -401,6 +401,29 @@
       border-color: var(--ink);
       background: var(--bg-elevated);
       box-shadow: 0 0 0 4px rgba(15,15,15,0.05);
+    }
+    .form-input.error,
+    .form-select.error {
+      border-color: var(--error);
+      background: var(--error-bg);
+    }
+    .form-input.error:focus,
+    .form-select.error:focus {
+      box-shadow: 0 0 0 4px rgba(192,38,38,0.08);
+    }
+    .form-error {
+      font-size: 12px;
+      color: var(--error);
+      max-height: 0;
+      opacity: 0;
+      overflow: hidden;
+      transition: all 0.2s var(--ease);
+      line-height: 1.4;
+    }
+    .form-error.show {
+      opacity: 1;
+      max-height: 60px;
+      margin-top: 6px;
     }
     /* remove number arrows */
     .form-input[type=number]::-webkit-inner-spin-button,
@@ -940,9 +963,8 @@
        ============================================ -->
   <header class="site-header" id="siteHeader">
     <div class="container">
-      <a href="#" class="logo">
+      <a href="#" class="logo" aria-label="Главная">
         <span class="logo-dot"></span>
-        Команда&nbsp;エレナ
       </a>
       <a href="#form" class="header-cta">
         <span class="pulse"></span>
@@ -992,7 +1014,7 @@
               <span class="bullet-icon">03</span>
               <span>
                 <strong>Качественное обучение и&nbsp;опытный наставник</strong>
-                <span class="bullet-meta">Оплачиваемая стажировка&nbsp;14&nbsp;дней</span>
+                <span class="bullet-meta">Оплачиваемая стажировка до&nbsp;7&nbsp;дней</span>
               </span>
             </li>
           </ul>
@@ -1012,21 +1034,25 @@
               <div class="form-row">
                 <label class="form-label" for="name">Ваше имя</label>
                 <input type="text" id="name" name="name" class="form-input" placeholder="Иван Иванов" required autocomplete="given-name">
+                <div class="form-error" id="nameError"></div>
               </div>
 
               <div class="form-row">
                 <label class="form-label" for="age">Сколько вам лет</label>
-                <input type="number" id="age" name="age" class="form-input" min="16" max="99" placeholder="18" required>
+                <input type="number" id="age" name="age" class="form-input" min="17" max="30" placeholder="18" required>
+                <div class="form-error" id="ageError"></div>
               </div>
 
               <div class="form-row">
                 <label class="form-label" for="phone">Номер телефона</label>
                 <input type="tel" id="phone" name="phone" class="form-input" placeholder="+38 (000) 000-00-00" required autocomplete="tel">
+                <div class="form-error" id="phoneError"></div>
               </div>
 
               <div class="form-row">
                 <label class="form-label" for="telegram">Ник в&nbsp;Телеграме</label>
                 <input type="text" id="telegram" name="telegram" class="form-input" placeholder="@yournikname" required>
+                <div class="form-error" id="telegramError"></div>
               </div>
 
               <div class="form-row">
@@ -1131,8 +1157,8 @@
       <div class="stats-grid">
         <article class="stat-card" data-num="01 / 03">
           <div class="stat-value">150+</div>
-          <div class="stat-label">Человек в&nbsp;команде</div>
-          <div class="stat-desc">Из&nbsp;них&nbsp;40%&nbsp;— тимлиды и&nbsp;наставники</div>
+          <div class="stat-label">Человек в&nbsp;офисе</div>
+          <div class="stat-desc">И&nbsp;мы&nbsp;обеспечиваем комфорт каждого!</div>
         </article>
 
         <article class="stat-card accent" data-num="02 / 03">
@@ -1144,7 +1170,7 @@
         <article class="stat-card" data-num="03 / 03">
           <div class="stat-value">$3 700+</div>
           <div class="stat-label">Средний чек новичка</div>
-          <div class="stat-desc">После&nbsp;14&nbsp;дней стажировки</div>
+          <div class="stat-desc">После&nbsp;7&nbsp;дней стажировки</div>
         </article>
       </div>
     </div>
@@ -1231,9 +1257,8 @@
   <footer class="site-footer">
     <div class="container">
       <div class="footer-grid">
-        <a href="#" class="logo">
+        <a href="#" class="logo" aria-label="Главная">
           <span class="logo-dot"></span>
-          Команда&nbsp;エレナ
         </a>
         <span>© 2026 · Киев, Украина · <a href="#">Политика конфиденциальности</a></span>
       </div>
@@ -1308,7 +1333,125 @@
     }
 
     // ============================================
-    // LEAD FORM
+    // VALIDATION HELPERS
+    // ============================================
+    function setFieldError(fieldId, errorId, message) {
+      const field = document.getElementById(fieldId);
+      const errorEl = document.getElementById(errorId);
+      if (!field || !errorEl) return;
+      if (message) {
+        field.classList.add('error');
+        errorEl.textContent = message;
+        errorEl.classList.add('show');
+      } else {
+        field.classList.remove('error');
+        errorEl.textContent = '';
+        errorEl.classList.remove('show');
+      }
+    }
+
+    function validateName(name) {
+      const v = (name || '').trim();
+      if (!v) return 'Укажите имя';
+      if (v.length < 2) return 'Имя слишком короткое';
+      if (v.length > 50) return 'Слишком длинное имя';
+      // Только русские / украинские буквы, пробелы, дефис, апостроф
+      if (!/^[а-яА-ЯёЁіїєґІЇЄҐ\s\-']+$/.test(v)) {
+        return 'Имя пишите русскими или украинскими буквами';
+      }
+      return null;
+    }
+
+    function validateAge(age) {
+      const n = parseInt(age, 10);
+      if (!age || isNaN(n)) return 'Укажите возраст';
+      if (n < 17) return 'К&nbsp;сожалению, вы&nbsp;не&nbsp;подходите нам по&nbsp;возрасту';
+      if (n > 30) return 'К&nbsp;сожалению, вы&nbsp;не&nbsp;подходите нам по&nbsp;возрасту';
+      return null;
+    }
+
+    function validatePhone(phone) {
+      const digits = (phone || '').replace(/\D/g, '');
+      if (digits.length === 0) return 'Укажите номер телефона';
+      if (digits.length !== 12 || !digits.startsWith('380')) {
+        return 'Введите полный украинский номер';
+      }
+      // Код оператора (2 цифры после 380)
+      const operator = digits.slice(3, 5);
+      const validOperators = [
+        '39','50','63','66','67','68','73',
+        '91','92','93','94','95','96','97','98','99'
+      ];
+      if (!validOperators.includes(operator)) {
+        return 'Проверьте код оператора';
+      }
+      // После кода оператора — 7 цифр
+      const rest = digits.slice(3); // 10 цифр
+      // Все одинаковые (типа 0000000000)
+      if (/^(\d)\1{9}$/.test(rest)) return 'Введите настоящий номер';
+      // Слишком много одинаковых подряд (6+)
+      if (/(\d)\1{5,}/.test(rest)) return 'Проверьте номер';
+      // Явные последовательности
+      const seq = ['0123456789', '1234567890', '9876543210', '0987654321'];
+      if (seq.includes(rest)) return 'Введите настоящий номер';
+      return null;
+    }
+
+    function validateTelegram(tg) {
+      let v = (tg || '').trim();
+      if (!v) return 'Укажите ник в&nbsp;Телеграме';
+      if (v.startsWith('@')) v = v.slice(1);
+      if (v.length < 5) return 'Ник слишком короткий';
+      if (v.length > 32) return 'Ник слишком длинный';
+      if (!/^[a-zA-Z0-9_]+$/.test(v)) return 'Ник только латиницей, цифрами и&nbsp;_';
+      return null;
+    }
+
+    // Очищаем ошибку при вводе (как только человек начал исправлять)
+    ['name', 'age', 'phone', 'telegram'].forEach(id => {
+      const field = document.getElementById(id);
+      if (!field) return;
+      field.addEventListener('input', () => {
+        const errEl = document.getElementById(id + 'Error');
+        if (errEl && errEl.classList.contains('show')) {
+          setFieldError(id, id + 'Error', null);
+        }
+      });
+      // Проверка при уходе с поля (кроме возраста — его проверяем сразу на input)
+      field.addEventListener('blur', () => {
+        if (!field.value.trim()) return;
+        const v = field.value;
+        let err = null;
+        if (id === 'name') err = validateName(v);
+        if (id === 'age') err = validateAge(v);
+        if (id === 'phone') err = validatePhone(v);
+        if (id === 'telegram') err = validateTelegram(v);
+        if (err) {
+          const errEl = document.getElementById(id + 'Error');
+          if (errEl) errEl.innerHTML = err;
+          document.getElementById(id).classList.add('error');
+          errEl.classList.add('show');
+        }
+      });
+    });
+
+    // Возраст — проверяем сразу при вводе (чтобы быстрее показать что не подходит)
+    document.getElementById('age').addEventListener('input', (e) => {
+      const v = e.target.value;
+      if (!v) return;
+      const err = validateAge(v);
+      if (err) {
+        const errEl = document.getElementById('ageError');
+        errEl.innerHTML = err;
+        e.target.classList.add('error');
+        errEl.classList.add('show');
+      } else {
+        setFieldError('age', 'ageError', null);
+      }
+    });
+
+    // ============================================
+    // LEAD FORM SUBMIT
     // ============================================
     const form = document.getElementById('leadForm');
     const submitBtn = document.getElementById('submitBtn');
@@ -1318,27 +1461,55 @@
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
 
-      // Валидация
-      const name = form.name.value.trim();
-      const age = parseInt(form.age.value, 10);
-      const phone = form.phone.value.trim();
-      const telegram = form.telegram.value.trim();
+      const name = form.name.value;
+      const age = form.age.value;
+      const phone = form.phone.value;
+      const telegram = form.telegram.value;
       const readiness = form.readiness.value;
       const consent = form.consent.checked;
 
-      if (!name) return showAlert('Введите имя');
-      if (!age || age < 16 || age > 99) return showAlert('Укажите корректный возраст (16–99)');
-      if (!phone || phone.length < 6) return showAlert('Введите номер телефона');
-      if (!telegram) return showAlert('Укажите ник в Телеграме');
+      // Валидация всех полей
+      const errors = {
+        name: validateName(name),
+        age: validateAge(age),
+        phone: validatePhone(phone),
+        telegram: validateTelegram(telegram),
+      };
+
+      // Показываем ошибки inline
+      Object.keys(errors).forEach(key => {
+        const errEl = document.getElementById(key + 'Error');
+        if (errors[key]) {
+          document.getElementById(key).classList.add('error');
+          errEl.innerHTML = errors[key];
+          errEl.classList.add('show');
+        } else {
+          setFieldError(key, key + 'Error', null);
+        }
+      });
+
+      // Если есть хоть одна ошибка — не отправляем
+      if (Object.values(errors).some(err => err !== null)) {
+        // Скроллим к первому полю с ошибкой
+        const firstError = document.querySelector('.form-input.error, .form-select.error');
+        if (firstError) firstError.focus();
+        return;
+      }
+
+      // Readiness / consent через toast (они не inline)
       if (!readiness) return showAlert('Выберите, когда готовы встретиться');
       if (!consent) return showAlert('Подтвердите согласие');
 
-      // UI: lock button
+      // UI: блокируем кнопку
       submitBtn.disabled = true;
       submitBtn.querySelector('.btn-text').textContent = 'Отправка...';
 
       const payload = {
-        name, age, phone, telegram, readiness,
+        name: name.trim(),
+        age: parseInt(age, 10),
+        phone: phone.trim(),
+        telegram: telegram.trim(),
+        readiness,
         source: 'landing',
         url: window.location.href,
         referrer: document.referrer || null,

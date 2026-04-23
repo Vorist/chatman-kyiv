@@ -1,5 +1,4 @@
 User-agent: *
 Allow: /
 
-# Замени на свой домен
-Sitemap: https://YOUR-DOMAIN.com/sitemap.xml
+Sitemap: https://chatman-kyiv.com/sitemap.xml
