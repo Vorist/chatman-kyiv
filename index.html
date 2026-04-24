@@ -1287,6 +1287,65 @@
     const WORKER_URL = 'https://chatmanager-lead-worker.igorivich2005.workers.dev';
 
     // ============================================
+    // META EVENT TRACKING
+    // ============================================
+    // Каждое событие срабатывает максимум 1 раз за сессию (защита от дублей)
+    const firedEvents = new Set();
+
+    function trackMetaEvent(eventName, params = {}, options = {}) {
+      if (firedEvents.has(eventName)) return; // не дублируем
+      firedEvents.add(eventName);
+
+      if (typeof fbq === 'function') {
+        // Стандартные события отправляем через track, кастомные через trackCustom
+        const standardEvents = ['PageView', 'ViewContent', 'InitiateCheckout', 'Lead', 'Contact', 'Search', 'AddToCart', 'Purchase', 'CompleteRegistration'];
+        const method = standardEvents.includes(eventName) ? 'track' : 'trackCustom';
+        fbq(method, eventName, params, options);
+      }
+      // Полезно для дебага в консоли
+      console.log('[Meta Event]', eventName, params);
+    }
+
+    // 1. ViewContent — через 15 сек если пользователь ещё на странице (не bounce)
+    setTimeout(() => {
+      if (!document.hidden) {
+        trackMetaEvent('ViewContent', {
+          content_name: 'Chat Manager Kyiv Landing',
+          content_category: 'HR Job Page'
+        });
+      }
+    }, 15000);
+
+    // 2-3. Scroll 50% и 75%
+    let maxScroll = 0;
+    window.addEventListener('scroll', () => {
+      const scrollPercent = Math.round(
+        (window.scrollY + window.innerHeight) / document.documentElement.scrollHeight * 100
+      );
+      if (scrollPercent > maxScroll) maxScroll = scrollPercent;
+
+      if (maxScroll >= 50 && !firedEvents.has('Scroll50')) {
+        trackMetaEvent('Scroll50', { percent: 50 });
+      }
+      if (maxScroll >= 75 && !firedEvents.has('Scroll75')) {
+        trackMetaEvent('Scroll75', { percent: 75 });
+      }
+    }, { passive: true });
+
+    // 4. InitiateCheckout — первый фокус на любом поле формы
+    document.querySelectorAll('#leadForm input, #leadForm select').forEach(field => {
+      field.addEventListener('focus', () => {
+        trackMetaEvent('InitiateCheckout', {
+          content_name: 'Lead Form Start',
+          content_category: 'HR Lead'
+        });
+      }, { once: true });
+    });
+
+    // 5. Lead — срабатывает в handleSuccess() после успешной отправки формы
+    // (см. функцию handleSuccess ниже в блоке LEAD FORM SUBMIT)
+
+    // ============================================
     // HEADER SCROLL
     // ============================================
     const header = document.getElementById('siteHeader');
@@ -1556,12 +1615,14 @@
       formWrapper.style.display = 'none';
       formSuccess.classList.add('active');
 
-      // Meta Pixel событие Lead (с event_id для дедупликации с CAPI)
-      if (typeof fbq === 'function') {
+      // Meta Pixel событие Lead (с event_id для дедупликации с CAPI из Worker)
+      if (typeof fbq === 'function' && !firedEvents.has('Lead')) {
+        firedEvents.add('Lead');
         fbq('track', 'Lead', {
           content_name: 'Chat Manager Kyiv',
           content_category: 'HR Lead'
         }, { eventID: eventId });
+        console.log('[Meta Event] Lead', { eventID: eventId });
       }
 
       // Scroll на форму чтобы увидеть успех
