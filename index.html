@@ -9,6 +9,19 @@
   <!-- Facebook Domain Verification -->
   <meta name="facebook-domain-verification" content="nssuf72n0aovoz0nwe270rcdemmlln" />
 
+  <!-- Google Analytics 4 (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-8ST25GZQJL"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-8ST25GZQJL', {
+      page_title: 'Чат-менеджер в офис — Киев',
+      page_location: window.location.href
+    });
+  </script>
+  <!-- End Google Analytics -->
+
   <!-- Favicon -->
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 
@@ -1294,23 +1307,39 @@
     const WORKER_URL = 'https://chatmanager-lead-worker.igorivich2005.workers.dev';
 
     // ============================================
-    // META EVENT TRACKING
+    // META + GA4 EVENT TRACKING
     // ============================================
     // Каждое событие срабатывает максимум 1 раз за сессию (защита от дублей)
     const firedEvents = new Set();
+
+    // Маппинг Meta event name → GA4 event name (GA4 использует snake_case)
+    const gaEventMap = {
+      'ViewContent': 'view_content',
+      'Scroll50': 'scroll_50',
+      'Scroll75': 'scroll_75',
+      'InitiateCheckout': 'begin_checkout',
+      'Lead': 'generate_lead',
+      'Contact': 'contact'
+    };
 
     function trackMetaEvent(eventName, params = {}, options = {}) {
       if (firedEvents.has(eventName)) return; // не дублируем
       firedEvents.add(eventName);
 
+      // --- Meta Pixel ---
       if (typeof fbq === 'function') {
-        // Стандартные события отправляем через track, кастомные через trackCustom
         const standardEvents = ['PageView', 'ViewContent', 'InitiateCheckout', 'Lead', 'Contact', 'Search', 'AddToCart', 'Purchase', 'CompleteRegistration'];
         const method = standardEvents.includes(eventName) ? 'track' : 'trackCustom';
         fbq(method, eventName, params, options);
       }
-      // Полезно для дебага в консоли
-      console.log('[Meta Event]', eventName, params);
+
+      // --- Google Analytics 4 ---
+      if (typeof gtag === 'function') {
+        const gaName = gaEventMap[eventName] || eventName.toLowerCase();
+        gtag('event', gaName, params);
+      }
+
+      console.log('[Event]', eventName, params);
     }
 
     // 1. ViewContent — через 15 сек если пользователь ещё на странице (не bounce)
@@ -1630,6 +1659,17 @@
           content_category: 'HR Lead'
         }, { eventID: eventId });
         console.log('[Meta Event] Lead', { eventID: eventId });
+      }
+
+      // GA4 — generate_lead (стандартное событие GA4 для лидогенерации)
+      if (typeof gtag === 'function') {
+        gtag('event', 'generate_lead', {
+          currency: 'USD',
+          value: 4.0,  // примерная стоимость лида (для ROI-отчётов)
+          event_id: eventId,
+          content_name: 'Chat Manager Kyiv'
+        });
+        console.log('[GA4] generate_lead', { event_id: eventId });
       }
 
       // Scroll на форму чтобы увидеть успех
