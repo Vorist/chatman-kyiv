@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Политика конфиденциальности — chatman-kyiv.com</title>
+  <meta name="description" content="Политика обработки персональных данных на сайте chatman-kyiv.com" />
+  <meta name="robots" content="noindex, follow" />
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+  <!-- Canonical -->
+  <link rel="canonical" href="https://chatman-kyiv.com/privacy.html" />
+
+  <!-- Facebook Domain Verification -->
+  <meta name="facebook-domain-verification" content="nssuf72n0aovoz0nwe270rcdemmlln" />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300..800&family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #FAF8F3;
+      --bg-elevated: #FFFFFF;
+      --ink: #0F0F0F;
+      --ink-soft: #1E1B18;
+      --muted: #6B6661;
+      --line: #E8E4DB;
+      --line-strong: #D4CEC2;
+      --accent: #FF5A1F;
+      --accent-hover: #E8481A;
+
+      --font-display: 'Bricolage Grotesque', ui-sans-serif, system-ui, sans-serif;
+      --font-body: 'Geist', ui-sans-serif, system-ui, sans-serif;
+
+      --ease: cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+    body {
+      font-family: var(--font-body);
+      font-size: 16px;
+      line-height: 1.65;
+      color: var(--ink);
+      background: var(--bg);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    a {
+      color: var(--ink);
+      text-decoration: underline;
+      text-decoration-color: var(--line-strong);
+      text-underline-offset: 3px;
+      transition: all 0.2s var(--ease);
+    }
+    a:hover {
+      color: var(--accent);
+      text-decoration-color: var(--accent);
+    }
+
+    .container {
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* Header */
+    .site-header {
+      border-bottom: 1px solid var(--line);
+      background: var(--bg);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      background: rgba(250, 248, 243, 0.85);
+    }
+    .site-header .container {
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .logo {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 20px;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+      color: var(--ink);
+    }
+    .logo-dot {
+      width: 10px;
+      height: 10px;
+      background: var(--accent);
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .back-link {
+      font-size: 14px;
+      color: var(--muted);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: color 0.2s var(--ease);
+    }
+    .back-link:hover { color: var(--ink); }
+    .back-link svg { width: 14px; height: 14px; }
+
+    /* Main content */
+    main {
+      padding: 60px 0 100px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-body);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 16px;
+    }
+    .eyebrow::before {
+      content: '';
+      width: 18px;
+      height: 1px;
+      background: var(--accent);
+    }
+
+    h1 {
+      font-family: var(--font-display);
+      font-weight: 500;
+      font-size: clamp(36px, 5vw, 56px);
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+      color: var(--ink);
+      margin-bottom: 24px;
+    }
+
+    .meta-info {
+      padding: 14px 18px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 48px;
+      display: flex;
+      gap: 32px;
+      flex-wrap: wrap;
+    }
+    .meta-info span strong { color: var(--ink); font-weight: 500; }
+
+    h2 {
+      font-family: var(--font-display);
+      font-weight: 500;
+      font-size: 24px;
+      letter-spacing: -0.015em;
+      color: var(--ink);
+      margin-top: 48px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+    }
+    h2::before {
+      content: counter(section) '.';
+      counter-increment: section;
+      font-size: 15px;
+      color: var(--accent);
+      font-weight: 600;
+      letter-spacing: 0;
+    }
+    main { counter-reset: section; }
+
+    h3 {
+      font-family: var(--font-display);
+      font-weight: 500;
+      font-size: 17px;
+      color: var(--ink-soft);
+      margin-top: 24px;
+      margin-bottom: 8px;
+    }
+
+    p {
+      margin-bottom: 16px;
+      color: var(--ink-soft);
+    }
+
+    ul, ol {
+      margin: 0 0 16px 0;
+      padding-left: 20px;
+    }
+    li {
+      margin-bottom: 8px;
+      color: var(--ink-soft);
+    }
+    li::marker { color: var(--accent); }
+
+    strong { color: var(--ink); font-weight: 600; }
+
+    .contact-box {
+      margin-top: 48px;
+      padding: 28px 32px;
+      background: var(--ink);
+      color: var(--bg);
+      border-radius: 18px;
+    }
+    .contact-box h2 {
+      color: var(--bg);
+      margin-top: 0;
+    }
+    .contact-box h2::before { color: var(--accent); }
+    .contact-box p { color: rgba(250, 248, 243, 0.75); }
+    .contact-box a {
+      color: var(--bg);
+      text-decoration-color: rgba(250, 248, 243, 0.3);
+    }
+    .contact-box a:hover {
+      color: var(--accent);
+      text-decoration-color: var(--accent);
+    }
+
+    .footer {
+      margin-top: 80px;
+      padding-top: 32px;
+      border-top: 1px solid var(--line);
+      font-size: 13px;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    @media (max-width: 640px) {
+      main { padding: 40px 0 60px; }
+      .meta-info { gap: 12px; flex-direction: column; }
+      h2 { font-size: 20px; margin-top: 36px; }
+      .contact-box { padding: 24px 22px; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="container">
+      <a href="/" class="logo" aria-label="Главная">
+        <span class="logo-dot"></span>
+      </a>
+      <a href="/" class="back-link">
+        <svg viewBox="0 0 16 16" fill="none">
+          <path d="M10 12L6 8L10 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        На главную
+      </a>
+    </div>
+  </header>
+
+  <main>
+    <div class="container">
+
+      <span class="eyebrow">Правовая информация</span>
+      <h1>Политика конфиденциальности</h1>
+
+      <div class="meta-info">
+        <span>Версия: <strong>1.0</strong></span>
+        <span>Действует с: <strong>24 апреля 2026</strong></span>
+        <span>Сайт: <strong>chatman-kyiv.com</strong></span>
+      </div>
+
+      <p>
+        Настоящая Политика конфиденциальности&nbsp;(далее&nbsp;— «Политика») описывает, какие персональные данные мы&nbsp;собираем на&nbsp;сайте <strong>chatman-kyiv.com</strong>, как&nbsp;их&nbsp;используем, храним и&nbsp;передаём. Мы&nbsp;серьёзно относимся к&nbsp;защите вашей приватности и&nbsp;обрабатываем данные в&nbsp;соответствии с&nbsp;Общим регламентом о&nbsp;защите данных (GDPR) и&nbsp;Законом Украины «О&nbsp;защите персональных данных».
+      </p>
+
+      <p>
+        Отправляя форму на&nbsp;сайте, вы&nbsp;подтверждаете, что&nbsp;ознакомились с&nbsp;Политикой и&nbsp;даёте согласие на&nbsp;обработку ваших персональных данных на&nbsp;условиях, описанных ниже.
+      </p>
+
+      <h2>Какие данные мы собираем</h2>
+
+      <h3>Данные, которые вы предоставляете добровольно</h3>
+      <p>
+        При&nbsp;заполнении формы на&nbsp;сайте мы&nbsp;собираем следующие данные:
+      </p>
+      <ul>
+        <li><strong>Имя</strong>&nbsp;— для&nbsp;персонального обращения при связи</li>
+        <li><strong>Возраст</strong>&nbsp;— для&nbsp;оценки соответствия требованиям вакансии</li>
+        <li><strong>Номер телефона</strong>&nbsp;— для&nbsp;связи с&nbsp;вами по&nbsp;вакансии</li>
+        <li><strong>Ник в&nbsp;Telegram</strong>&nbsp;— как альтернативный канал связи</li>
+        <li><strong>Желаемые сроки начала работы</strong>&nbsp;— для&nbsp;планирования собеседования</li>
+      </ul>
+
+      <h3>Данные, собираемые автоматически</h3>
+      <p>
+        Когда вы&nbsp;посещаете сайт, автоматически собирается техническая информация:
+      </p>
+      <ul>
+        <li>IP-адрес и&nbsp;примерная геолокация (страна, регион)</li>
+        <li>Тип браузера, операционная система, разрешение экрана</li>
+        <li>Страница перехода (referrer), время визита и&nbsp;взаимодействия</li>
+        <li>Cookies и&nbsp;идентификаторы рекламных систем (<code>_fbp</code>, <code>_fbc</code>)</li>
+      </ul>
+
+      <h2>Цели обработки данных</h2>
+      <p>Мы&nbsp;используем ваши персональные данные исключительно для&nbsp;следующих целей:</p>
+      <ul>
+        <li><strong>Связь с&nbsp;кандидатом</strong>&nbsp;— для&nbsp;приглашения на&nbsp;собеседование, обсуждения условий работы и&nbsp;релокации</li>
+        <li><strong>Оценка кандидата</strong>&nbsp;— для&nbsp;проверки соответствия требованиям вакансии чат-менеджера</li>
+        <li><strong>Улучшение рекламы</strong>&nbsp;— анонимизированные данные о&nbsp;действиях на&nbsp;сайте передаются в&nbsp;рекламные системы Meta для&nbsp;показа релевантной рекламы похожим людям</li>
+        <li><strong>Аналитика сайта</strong>&nbsp;— для&nbsp;понимания, как&nbsp;посетители взаимодействуют с&nbsp;сайтом, и&nbsp;улучшения пользовательского опыта</li>
+      </ul>
+
+      <h2>Правовое основание обработки</h2>
+      <p>
+        Обработка ваших данных осуществляется на&nbsp;основании:
+      </p>
+      <ul>
+        <li><strong>Вашего согласия</strong>, которое вы&nbsp;даёте при отправке формы (ст.&nbsp;6(1)(a) GDPR)</li>
+        <li><strong>Наших законных интересов</strong> в&nbsp;ведении HR-деятельности и&nbsp;рекламы (ст.&nbsp;6(1)(f) GDPR)</li>
+        <li><strong>Преддоговорных отношений</strong>&nbsp;— для&nbsp;подготовки к&nbsp;возможному трудоустройству (ст.&nbsp;6(1)(b) GDPR)</li>
+      </ul>
+
+      <h2>Кому мы передаём данные</h2>
+      <p>
+        Ваши данные не&nbsp;продаются и&nbsp;не&nbsp;передаются третьим лицам для&nbsp;маркетинговых целей. Для&nbsp;обеспечения работы сайта мы&nbsp;используем следующих поставщиков услуг:
+      </p>
+      <ul>
+        <li><strong>Cloudflare, Inc.</strong> (США)&nbsp;— хостинг и&nbsp;защита сайта. <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener">Политика Cloudflare</a></li>
+        <li><strong>Meta Platforms, Inc.</strong> (США)&nbsp;— рекламная платформа Meta&nbsp;Ads. <a href="https://www.facebook.com/privacy/policy" target="_blank" rel="noopener">Политика Meta</a></li>
+        <li><strong>Google&nbsp;LLC</strong> (США)&nbsp;— хранение заявок в&nbsp;Google&nbsp;Sheets. <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Политика Google</a></li>
+        <li><strong>Make.com</strong> (Чехия, ЕС)&nbsp;— автоматизация обработки заявок. <a href="https://www.make.com/en/privacy-notice" target="_blank" rel="noopener">Политика Make</a></li>
+        <li><strong>Telegram Messenger Inc.</strong>&nbsp;— уведомления рекрутерам. <a href="https://telegram.org/privacy" target="_blank" rel="noopener">Политика Telegram</a></li>
+      </ul>
+      <p>
+        Мы&nbsp;передаём только те&nbsp;данные, которые необходимы для&nbsp;работы каждого сервиса, и&nbsp;заключаем с&nbsp;ними соглашения об&nbsp;обработке данных (DPA), где&nbsp;это применимо.
+      </p>
+
+      <h2>Сроки хранения данных</h2>
+      <ul>
+        <li><strong>Данные кандидатов, приглашённых на&nbsp;собеседование</strong>&nbsp;— до&nbsp;6&nbsp;месяцев после завершения процесса трудоустройства</li>
+        <li><strong>Данные отклонённых кандидатов</strong>&nbsp;— до&nbsp;30&nbsp;дней, после чего удаляются</li>
+        <li><strong>Технические логи и&nbsp;cookies</strong>&nbsp;— до&nbsp;90&nbsp;дней</li>
+        <li><strong>Данные в&nbsp;рекламных системах</strong>&nbsp;— по&nbsp;политикам соответствующих платформ (Meta хранит данные до&nbsp;180&nbsp;дней)</li>
+      </ul>
+
+      <h2>Cookies и технологии отслеживания</h2>
+      <p>
+        Сайт использует cookies и&nbsp;аналогичные технологии для&nbsp;корректной работы и&nbsp;анализа эффективности рекламы. В&nbsp;частности:
+      </p>
+      <ul>
+        <li><strong>Meta Pixel</strong>&nbsp;— отслеживает, как&nbsp;посетители взаимодействуют с&nbsp;сайтом, чтобы Meta могла показывать более релевантную рекламу</li>
+        <li><strong>Cookies сессии</strong>&nbsp;— необходимы для&nbsp;защиты от&nbsp;повторных отправок формы</li>
+      </ul>
+      <p>
+        Вы&nbsp;можете отключить cookies в&nbsp;настройках браузера, однако это может повлиять на&nbsp;работу сайта.
+      </p>
+
+      <h2>Ваши права</h2>
+      <p>
+        В&nbsp;соответствии с&nbsp;GDPR и&nbsp;законодательством Украины вы&nbsp;имеете следующие права:
+      </p>
+      <ul>
+        <li><strong>Право на&nbsp;доступ</strong>&nbsp;— узнать, какие ваши данные мы&nbsp;храним</li>
+        <li><strong>Право на&nbsp;исправление</strong>&nbsp;— попросить исправить неточные данные</li>
+        <li><strong>Право на&nbsp;удаление</strong>&nbsp;(«право быть забытым»)&nbsp;— попросить удалить все ваши данные</li>
+        <li><strong>Право на&nbsp;ограничение обработки</strong>&nbsp;— ограничить использование ваших данных</li>
+        <li><strong>Право на&nbsp;переносимость</strong>&nbsp;— получить копию ваших данных в&nbsp;машиночитаемом формате</li>
+        <li><strong>Право на&nbsp;возражение</strong>&nbsp;— возразить против обработки в&nbsp;целях рекламы</li>
+        <li><strong>Право отозвать согласие</strong>&nbsp;— в&nbsp;любой момент без объяснения причин</li>
+        <li><strong>Право подать жалобу</strong>&nbsp;— в&nbsp;надзорный орган защиты данных (в&nbsp;Украине&nbsp;— Уполномоченный Верховной Рады Украины по&nbsp;правам человека)</li>
+      </ul>
+
+      <h2>Безопасность данных</h2>
+      <p>
+        Мы&nbsp;применяем технические и&nbsp;организационные меры для&nbsp;защиты ваших данных:
+      </p>
+      <ul>
+        <li>Передача данных через HTTPS с&nbsp;TLS-шифрованием</li>
+        <li>Хранение в&nbsp;защищённой инфраструктуре Cloudflare и&nbsp;Google</li>
+        <li>Хеширование персональных идентификаторов при передаче в&nbsp;рекламные системы (SHA-256)</li>
+        <li>Ограниченный доступ к&nbsp;данным&nbsp;— только для&nbsp;сотрудников, занятых в&nbsp;HR-процессе</li>
+      </ul>
+      <p>
+        Несмотря на&nbsp;наши усилия, ни&nbsp;один метод передачи данных через интернет не&nbsp;является на&nbsp;100% безопасным. Мы&nbsp;не&nbsp;можем гарантировать абсолютную безопасность ваших данных.
+      </p>
+
+      <h2>Дети и несовершеннолетние</h2>
+      <p>
+        Наш сайт предназначен для&nbsp;лиц старше&nbsp;17&nbsp;лет&nbsp;— это отражено в&nbsp;форме заявки, где&nbsp;возраст меньше&nbsp;17&nbsp;лет не&nbsp;принимается. Мы&nbsp;не&nbsp;собираем сознательно данные несовершеннолетних младше этого возраста. Если&nbsp;вы&nbsp;считаете, что&nbsp;мы&nbsp;получили данные от&nbsp;ребёнка младше&nbsp;17&nbsp;лет, пожалуйста, свяжитесь с&nbsp;нами&nbsp;— мы&nbsp;удалим эти данные.
+      </p>
+
+      <h2>Изменения в политике</h2>
+      <p>
+        Мы&nbsp;можем обновлять эту Политику время от&nbsp;времени. При существенных изменениях мы&nbsp;разместим уведомление на&nbsp;сайте. Дата последнего обновления всегда указана в&nbsp;верхней части этого документа.
+      </p>
+
+      <div class="contact-box">
+        <h2 style="counter-increment: section;">Контакты для вопросов</h2>
+        <p>
+          Если&nbsp;у&nbsp;вас есть вопросы, запросы по&nbsp;вашим данным или жалобы&nbsp;— напишите нам через <a href="/">форму на&nbsp;главной странице</a> с&nbsp;пометкой «Privacy Policy». Мы&nbsp;рассмотрим ваш запрос в&nbsp;течение&nbsp;30&nbsp;дней.
+        </p>
+      </div>
+
+      <div class="footer">
+        <span>© 2026&nbsp;· chatman-kyiv.com · Киев, Украина</span>
+        <a href="/">Вернуться на&nbsp;главную</a>
+      </div>
+
+    </div>
+  </main>
+
+</body>
+</html>
