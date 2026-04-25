@@ -1307,6 +1307,41 @@
     const WORKER_URL = 'https://chatmanager-lead-worker.igorivich2005.workers.dev';
 
     // ============================================
+    // FBC / FBP COOKIE MANAGEMENT
+    // ============================================
+
+    // Генерируем или читаем external_id (уникальный ID визитора для CAPI)
+    function getOrCreateExternalId() {
+      const key = '_eid';
+      let eid = localStorage.getItem(key);
+      if (!eid) {
+        eid = 'u_' + Date.now() + '_' + Math.random().toString(36).slice(2, 11);
+        try { localStorage.setItem(key, eid); } catch(e) {}
+      }
+      return eid;
+    }
+
+    // Захватываем fbclid из URL и создаём _fbc cookie по правилам Meta
+    // Формат: fb.${subdomain_index}.${creation_time}.${fbclid}
+    function captureFbclid() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const fbclid = urlParams.get('fbclid');
+      if (!fbclid) return;
+
+      const existingFbc = getCookie('_fbc');
+      if (existingFbc) return; // уже есть
+
+      const fbc = `fb.1.${Date.now()}.${fbclid}`;
+      const expires = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toUTCString();
+      document.cookie = `_fbc=${fbc}; expires=${expires}; path=/; SameSite=Lax`;
+      console.log('[FBC] Captured fbclid, set _fbc cookie');
+    }
+
+    // Запускаем захват сразу при загрузке
+    captureFbclid();
+    const externalId = getOrCreateExternalId();
+
+    // ============================================
     // META + GA4 EVENT TRACKING
     // ============================================
     // Каждое событие срабатывает максимум 1 раз за сессию (защита от дублей)
@@ -1613,6 +1648,7 @@
         readiness,
         source: 'landing',
         event_id: eventId,
+        external_id: externalId,
         url: window.location.href,
         referrer: document.referrer || null,
         fbp: getCookie('_fbp'),

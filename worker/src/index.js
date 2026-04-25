@@ -125,11 +125,12 @@ async function sendToMake(url, data) {
 }
 
 async function sendToCAPI(env, data, request) {
-  // Хешируем PII по правилам Meta
+  // Хешируем PII по правилам Meta (SHA-256, lowercase, trimmed)
   const phoneDigits = data.phone_e164.replace(/\D/g, '');
   const phoneHash = await sha256(phoneDigits);
   const nameHash = data.name ? await sha256(data.name.toLowerCase().trim()) : null;
   const countryHash = await sha256('ua');
+  const externalIdHash = data.external_id ? await sha256(data.external_id) : null;
 
   const userData = {
     ph: [phoneHash],
@@ -139,8 +140,24 @@ async function sendToCAPI(env, data, request) {
   };
 
   if (nameHash) userData.fn = [nameHash];
+  if (externalIdHash) userData.external_id = [externalIdHash];
+
+  // fbp — ID браузера (устанавливается Meta Pixel автоматически)
   if (data.fbp) userData.fbp = data.fbp;
-  if (data.fbc) userData.fbc = data.fbc;
+
+  // fbc — ID клика (устанавливается из ?fbclid= в URL рекламного объявления)
+  if (data.fbc) {
+    userData.fbc = data.fbc;
+  } else if (data.url) {
+    // Пробуем извлечь fbclid из URL если cookie не было
+    try {
+      const urlObj = new URL(data.url);
+      const fbclid = urlObj.searchParams.get('fbclid');
+      if (fbclid) {
+        userData.fbc = `fb.1.${data.timestamp * 1000}.${fbclid}`;
+      }
+    } catch(e) {}
+  }
 
   const payload = {
     data: [{
@@ -169,7 +186,11 @@ async function sendToCAPI(env, data, request) {
     const text = await res.text();
     throw new Error(`CAPI ${res.status}: ${text.slice(0, 200)}`);
   }
-  return res;
+
+  // Логируем ответ Meta для диагностики
+  const resData = await res.json();
+  console.log('CAPI response:', JSON.stringify(resData));
+  return resData;
 }
 
 async function sha256(text) {
