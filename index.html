@@ -1397,7 +1397,9 @@
       if (!document.hidden) {
         trackMetaEvent('ViewContent', {
           content_name: 'Chat Manager Kyiv Landing',
-          content_category: 'HR Job Page'
+          content_category: 'HR Job Page',
+          currency: 'USD',
+          value: 1.0  // ценность просмотра страницы (Lead = 4.0, ViewContent = 1.0)
         });
       }
     }, 15000);
@@ -1423,7 +1425,9 @@
       field.addEventListener('focus', () => {
         trackMetaEvent('InitiateCheckout', {
           content_name: 'Lead Form Start',
-          content_category: 'HR Lead'
+          content_category: 'HR Lead',
+          currency: 'USD',
+          value: 2.0  // начал заполнять — ценнее чем просмотр, но меньше чем лид
         });
       }, { once: true });
     });
