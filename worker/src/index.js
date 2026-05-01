@@ -1,19 +1,25 @@
 /**
  * Cloudflare Worker — обработчик формы лендинга
  *
+ * Дедупликация:
+ *   - Проверяет телефон и телеграм в KV хранилище
+ *   - Нормализует телеграм: @ убирается, всё в lowercase
+ *   - TTL записей: 90 дней
+ *
  * Отправляет параллельно в 3 системы:
  *   1. Make.com webhook → Google Sheets + Telegram
- *   2. Meta CAPI → пиксель CHATI2v1
- *   3. TikTok Events API → пиксель D7P7523C77U02PK9RRH0
+ *   2. Meta CAPI
+ *   3. TikTok Events API
  *
  * Секреты (wrangler secret put):
- *   MAKE_WEBHOOK_URL      — URL Make webhook
- *   FB_PIXEL_ID           — 2160949541347107
- *   FB_ACCESS_TOKEN       — Meta CAPI токен
- *   ALLOWED_ORIGIN        — https://chatman-kyiv.com
- *   TIKTOK_PIXEL_ID       — D7P7523C77U02PK9RRH0
- *   TIKTOK_ACCESS_TOKEN   — TikTok Events API токен
+ *   MAKE_WEBHOOK_URL, FB_PIXEL_ID, FB_ACCESS_TOKEN
+ *   ALLOWED_ORIGIN, TIKTOK_PIXEL_ID, TIKTOK_ACCESS_TOKEN
+ *
+ * KV namespace:
+ *   LEADS_DEDUP — хранит хеши телефонов и телеграм-ников
  */
+
+const KV_TTL_SECONDS = 90 * 24 * 60 * 60; // 90 дней
 
 export default {
   async fetch(request, env, ctx) {
@@ -50,9 +56,56 @@ export default {
 
     const phoneE164 = normalizePhone(phone);
 
+    // Нормализация телеграма: убираем @ и приводим к lowercase
+    // @Sinba08 и Sinba08 — одно и то же
+    const tgNormalized = telegram.trim().replace(/^@/, '').toLowerCase();
+
+    // ============================================
+    // ДЕДУПЛИКАЦИЯ ЧЕРЕЗ KV
+    // ============================================
+    if (env.LEADS_DEDUP) {
+      const phoneKey = `phone:${await sha256(phoneE164)}`;
+      const tgKey = `tg:${await sha256(tgNormalized)}`;
+
+      const [existingPhone, existingTg] = await Promise.all([
+        env.LEADS_DEDUP.get(phoneKey),
+        env.LEADS_DEDUP.get(tgKey),
+      ]);
+
+      if (existingPhone) {
+        console.log('Duplicate: phone', phoneE164);
+        return json({
+          duplicate: true,
+          message: 'Вы уже оставили заявку. Мы скоро свяжемся с вами!'
+        }, 200, corsHeaders);
+      }
+
+      if (existingTg) {
+        console.log('Duplicate: telegram', tgNormalized);
+        return json({
+          duplicate: true,
+          message: 'Вы уже оставили заявку. Мы скоро свяжемся с вами!'
+        }, 200, corsHeaders);
+      }
+
+      // Записываем в KV с TTL 90 дней
+      // Сохраняем читаемые данные для возможной отладки
+      const submittedAt = new Date().toISOString();
+      await Promise.all([
+        env.LEADS_DEDUP.put(phoneKey, submittedAt, { expirationTtl: KV_TTL_SECONDS }),
+        env.LEADS_DEDUP.put(tgKey, submittedAt, { expirationTtl: KV_TTL_SECONDS }),
+      ]);
+
+      console.log('KV: saved phone + tg for', tgNormalized);
+    }
+
+    // ============================================
+    // ОБРАБОТКА ЛИДА
+    // ============================================
     const enriched = {
       ...data,
       phone_e164: phoneE164,
+      telegram_normalized: tgNormalized,
       received_at: new Date().toISOString(),
       ip: request.headers.get('CF-Connecting-IP'),
       country: request.headers.get('CF-IPCountry'),
@@ -82,6 +135,10 @@ export default {
     return json({ success: true }, 200, corsHeaders);
   },
 };
+
+// ========================================
+// HELPERS
+// ========================================
 
 function json(data, status, headers = {}) {
   return new Response(JSON.stringify(data), {

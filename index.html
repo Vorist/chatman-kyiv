@@ -1317,6 +1317,28 @@
        ============================================ -->
   <script>
     // ============================================
+    // LOCALSTORAGE DEDUP — проверка при загрузке
+    // ============================================
+    (function checkAlreadySubmitted() {
+      try {
+        if (localStorage.getItem('lead_submitted') === 'true') {
+          // Скрываем форму, показываем сообщение
+          const wrapper = document.getElementById('formWrapper');
+          const success = document.getElementById('formSuccess');
+          if (wrapper && success) {
+            wrapper.style.display = 'none';
+            success.classList.add('active');
+            // Меняем текст на соответствующий
+            const h3 = success.querySelector('h3');
+            const p = success.querySelector('p');
+            if (h3) h3.textContent = 'Вы уже оставили заявку';
+            if (p) p.textContent = 'Наш HR скоро свяжется с вами. Если у вас есть вопросы — напишите нам напрямую.';
+          }
+        }
+      } catch(e) {}
+    })();
+
+    // ============================================
     // CONFIG
     // ============================================
     const WORKER_URL = 'https://chatmanager-lead-worker.igorivich2005.workers.dev';
@@ -1696,6 +1718,18 @@
         });
 
         if (!res.ok) throw new Error('Ошибка сервера: ' + res.status);
+
+        const result = await res.json();
+
+        // Worker вернул duplicate: true — человек уже отправлял заявку
+        if (result.duplicate) {
+          submitBtn.disabled = false;
+          submitBtn.querySelector('.btn-text').textContent = 'Отправить заявку';
+          // Показываем как успех — не говорим "вы дубль", просто "мы свяжемся"
+          handleSuccess(eventId, result.message);
+          return;
+        }
+
         handleSuccess(eventId);
 
       } catch (err) {
@@ -1706,35 +1740,42 @@
       }
     });
 
-    function handleSuccess(eventId) {
+    function handleSuccess(eventId, customMessage) {
       formWrapper.style.display = 'none';
       formSuccess.classList.add('active');
 
-      // Meta Pixel событие Lead (с event_id для дедупликации с CAPI из Worker)
-      if (typeof fbq === 'function' && !firedEvents.has('Lead')) {
-        firedEvents.add('Lead');
-        fbq('track', 'Lead', {
-          content_name: 'Chat Manager Kyiv',
-          content_category: 'HR Lead'
-        }, { eventID: eventId });
-        console.log('[Meta Event] Lead', { eventID: eventId });
+      // Кастомное сообщение (при дубликате)
+      if (customMessage) {
+        const p = formSuccess.querySelector('p');
+        if (p) p.textContent = customMessage;
       }
 
-      // GA4 — generate_lead (стандартное событие GA4 для лидогенерации)
-      if (typeof gtag === 'function') {
-        gtag('event', 'generate_lead', {
-          currency: 'USD',
-          value: 4.0,  // примерная стоимость лида (для ROI-отчётов)
-          event_id: eventId,
-          content_name: 'Chat Manager Kyiv'
-        });
-        console.log('[GA4] generate_lead', { event_id: eventId });
-      }
+      // Записываем в localStorage — при следующем визите форма не покажется
+      try { localStorage.setItem('lead_submitted', 'true'); } catch(e) {}
 
-      // TikTok Pixel — SubmitForm
-      if (typeof ttq !== 'undefined') {
-        ttq.track('SubmitForm');
-        console.log('[TikTok] SubmitForm');
+      // Пиксели — только для новых лидов, не дублей
+      if (!customMessage) {
+        if (typeof fbq === 'function' && !firedEvents.has('Lead')) {
+          firedEvents.add('Lead');
+          fbq('track', 'Lead', {
+            content_name: 'Chat Manager Kyiv',
+            content_category: 'HR Lead'
+          }, { eventID: eventId });
+          console.log('[Meta Event] Lead', { eventID: eventId });
+        }
+        if (typeof gtag === 'function') {
+          gtag('event', 'generate_lead', {
+            currency: 'USD',
+            value: 4.0,
+            event_id: eventId,
+            content_name: 'Chat Manager Kyiv'
+          });
+          console.log('[GA4] generate_lead', { event_id: eventId });
+        }
+        if (typeof ttq !== 'undefined') {
+          ttq.track('SubmitForm');
+          console.log('[TikTok] SubmitForm');
+        }
       }
 
       // Scroll на форму чтобы увидеть успех
