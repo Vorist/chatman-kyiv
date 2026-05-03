@@ -1531,23 +1531,43 @@
       if (v.length < 2) return 'Имя слишком короткое';
       if (v.length > 50) return 'Слишком длинное имя';
       if (!/^[а-яА-ЯёЁіїєґІЇЄҐ\s\-']+$/.test(v)) {
-        return 'Имя пишите русскими или украинскими буквами';
+        return 'Имя пишите кириллицей';
       }
+
+      const VOWELS = new Set('аеєиіїйоуюяёАЕЄИІЇЙОУЮЯЁ');
+      const CONSONANTS = new Set('бвгґджзклмнпрстфхцчшщьъБВГҐДЖЗКЛМНПРСТФХЦЧШЩЬЪ');
+
+      const KEYBOARD = [
+        'йцукен','цукенг','укенгш','кенгшщ','укен','йцук',
+        'фывапр','ывапро','вапрол','апролд','фыва','ывап','вапр',
+        'ячсмит','чсмить','смитьб','митьбю','ячсм','чсми','смит',
+      ];
+
+      const BAD_BIGRAMS = [
+        'фв','вф','мф','фм','тш','шт','мг','фт','тф',
+        'зч','чз','жч','чж','жш','шж','щш','шщ','щж','жщ',
+        'жм','мж','цм','мц','шв','вш','фш','шф',
+        'щт','тщ','жт','тж','цт','тц','шм','мш',
+        'жб','бж','зж','жз','кж','жв','нщ','гш','дщ',
+        'хц','жр','рж','щн','бз','бс','шб',
+      ];
+
+      // Сочетания "ы" с гласной — нетипичны для имён
+      const BAD_VOWEL_PAIRS = [
+        'ыа','аы','ыо','оы','ыу','уы','ыи','иы','ыє','єы','ыі','іы',
+      ];
 
       const clean = v.replace(/[\s\-']/g, '');
       const lower = clean.toLowerCase();
-      const vowels = new Set('аеєиіїйоуюяёАЕЄИІЇЙОУЮЯЁ');
-      const consonants = new Set('бвгґджзклмнпрстфхцчшщьъБВГҐДЖЗКЛМНПРСТФХЦЧШЩЬЪ');
+      const vowelCount = [...clean].filter(c => VOWELS.has(c)).length;
 
       // 1. Хотя бы одна гласная
-      if (![...clean].some(c => vowels.has(c))) {
-        return 'Введите настоящее имя';
-      }
+      if (vowelCount === 0) return 'Введите настоящее имя';
 
       // 2. Не более 4 согласных подряд
       let maxCons = 0, cur = 0;
       for (const c of clean) {
-        if (consonants.has(c)) { cur++; maxCons = Math.max(maxCons, cur); }
+        if (CONSONANTS.has(c)) { cur++; maxCons = Math.max(maxCons, cur); }
         else cur = 0;
       }
       if (maxCons > 4) return 'Введите настоящее имя';
@@ -1561,14 +1581,45 @@
         }
       }
 
-      // 4. Паттерны клавиатурной раскладки
-      const kbPatterns = [
-        'йцукен','цукенг','укенгш','кенгшщ','укен','йцук','цукен',
-        'фывапр','ывапро','вапрол','апролд','фыва','ывап','вапр',
-        'ячсмит','чсмить','смитьб','митьбю','ячсм','чсми','смит',
-      ];
-      if (kbPatterns.some(p => lower.includes(p))) {
-        return 'Введите настоящее имя';
+      // 4. Клавиатурные раскладки
+      if (KEYBOARD.some(p => lower.includes(p))) return 'Введите настоящее имя';
+
+      // A. Процент гласных 15%-80% (для имён длиннее 3 символов)
+      if (clean.length > 3) {
+        const ratio = vowelCount / clean.length;
+        if (ratio > 0.80 || ratio < 0.15) return 'Введите настоящее имя';
+      }
+
+      // B. Запрещённые биграммы
+      for (const bg of BAD_BIGRAMS) {
+        if (lower.includes(bg)) return 'Введите настоящее имя';
+      }
+
+      // B2. Сочетания ы + гласная
+      for (const pair of BAD_VOWEL_PAIRS) {
+        if (lower.includes(pair)) return 'Введите настоящее имя';
+      }
+
+      // C. ВГВ-паттерн — проверяем каждую часть составного имени отдельно
+      for (const part of v.split(/[\s\-]/)) {
+        const p = part.replace(/'/g, '').toLowerCase();
+        if (p.length < 6) continue;
+        let vgv = 0, i = 0;
+        while (i < p.length - 2) {
+          if (VOWELS.has(p[i]) && CONSONANTS.has(p[i+1]) && VOWELS.has(p[i+2])) {
+            vgv++; i += 3;
+          } else i++;
+        }
+        if (vgv >= 3) return 'Введите настоящее имя';
+      }
+
+      // D. Цикличные биграммы (менее 50% уникальных при длине 6+)
+      if (clean.length >= 6) {
+        const bigrams = [];
+        for (let i = 0; i < lower.length - 1; i++) bigrams.push(lower.slice(i, i+2));
+        if (bigrams.length >= 5 && new Set(bigrams).size / bigrams.length < 0.50) {
+          return 'Введите настоящее имя';
+        }
       }
 
       return null;
