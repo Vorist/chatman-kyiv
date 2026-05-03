@@ -1527,13 +1527,50 @@
 
     function validateName(name) {
       const v = (name || '').trim();
-      if (!v) return 'Укажите имя';
+      if (!v) return 'Введите имя';
       if (v.length < 2) return 'Имя слишком короткое';
       if (v.length > 50) return 'Слишком длинное имя';
-      // Только русские / украинские буквы, пробелы, дефис, апостроф
       if (!/^[а-яА-ЯёЁіїєґІЇЄҐ\s\-']+$/.test(v)) {
         return 'Имя пишите русскими или украинскими буквами';
       }
+
+      const clean = v.replace(/[\s\-']/g, '');
+      const lower = clean.toLowerCase();
+      const vowels = new Set('аеєиіїйоуюяёАЕЄИІЇЙОУЮЯЁ');
+      const consonants = new Set('бвгґджзклмнпрстфхцчшщьъБВГҐДЖЗКЛМНПРСТФХЦЧШЩЬЪ');
+
+      // 1. Хотя бы одна гласная
+      if (![...clean].some(c => vowels.has(c))) {
+        return 'Введите настоящее имя';
+      }
+
+      // 2. Не более 4 согласных подряд
+      let maxCons = 0, cur = 0;
+      for (const c of clean) {
+        if (consonants.has(c)) { cur++; maxCons = Math.max(maxCons, cur); }
+        else cur = 0;
+      }
+      if (maxCons > 4) return 'Введите настоящее имя';
+
+      // 3. Не более 55% одинаковых букв (при длине 4+)
+      if (clean.length >= 4) {
+        for (const char of new Set(lower)) {
+          if ([...lower].filter(c => c === char).length / lower.length > 0.55) {
+            return 'Введите настоящее имя';
+          }
+        }
+      }
+
+      // 4. Паттерны клавиатурной раскладки
+      const kbPatterns = [
+        'йцукен','цукенг','укенгш','кенгшщ','укен','йцук','цукен',
+        'фывапр','ывапро','вапрол','апролд','фыва','ывап','вапр',
+        'ячсмит','чсмить','смитьб','митьбю','ячсм','чсми','смит',
+      ];
+      if (kbPatterns.some(p => lower.includes(p))) {
+        return 'Введите настоящее имя';
+      }
+
       return null;
     }
 
