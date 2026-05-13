@@ -1,4 +1,29 @@
+# robots.txt — chatman-kyiv.com
+# Обновлено: 2026-05-13
+
 User-agent: *
 Allow: /
+Allow: /favicon.svg
+Allow: /images/
 
+# Закрываем технические страницы от индексации
+Disallow: /worker/
+Disallow: /thank-you
+Disallow: /*?utm_*
+Disallow: /*?fbclid=*
+Disallow: /*?ttclid=*
+Disallow: /*?gclid=*
+
+# Для краулеров Meta и TikTok — не ограничиваем
+User-agent: facebookexternalhit
+Allow: /
+
+User-agent: Twitterbot
+Allow: /
+
+# Политика конфиденциальности — не в основном индексе
+# (добавить noindex в <head> privacy.html)
+Disallow: /privacy.html
+
+# Sitemap
 Sitemap: https://chatman-kyiv.com/sitemap.xml
