@@ -2155,7 +2155,9 @@
           firedEvents.add('Lead');
           fbq('track', 'Lead', {
             content_name: 'Chat Manager Kyiv',
-            content_category: 'HR Lead'
+            content_category: 'HR Lead',
+            value: 4.00,
+            currency: 'USD'
           }, { eventID: eventId });
           console.log('[Meta Event] Lead', { eventID: eventId });
         }

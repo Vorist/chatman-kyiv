@@ -209,6 +209,8 @@ async function sendToCAPI(env, data, request) {
         content_name: 'Chat Manager Kyiv',
         content_category: 'HR Lead',
         readiness: data.readiness,
+        value: 4.00,
+        currency: 'USD',
       },
     }],
   };
