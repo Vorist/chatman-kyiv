@@ -7,7 +7,7 @@
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=()
   Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
-  X-XSS-Protection: 1; mode=block
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://connect.facebook.net https://analytics.tiktok.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://www.facebook.com https://analytics.tiktok.com; connect-src 'self' https://*.workers.dev https://hook.eu2.make.com https://www.google-analytics.com https://connect.facebook.net https://analytics.tiktok.com; frame-src 'self';
 
 /*.html
   Cache-Control: public, max-age=300, must-revalidate
