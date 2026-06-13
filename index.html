@@ -167,10 +167,18 @@
     "mainEntity": [
       {
         "@type": "Question",
+        "name": "Що саме входить у роботу чат-менеджера?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Ви ведете листування з клієнтами компанії: відповідаєте на запитання, консультуєте по продукту та допомагаєте оформити замовлення в CRM за готовими скриптами. Це не інтимні/18+ чати і не «спілкування за гроші» — лише звичайна клієнтська підтримка та продажі в месенджерах. Жодних дзвінків і холодних продажів."
+        }
+      },
+      {
+        "@type": "Question",
         "name": "Як розраховується зарплата чат-менеджера?",
         "acceptedAnswer": {
           "@type": "Answer",
-          "text": "Зарплата складається з фіксованої ставки та відсотка від суми виручки. Середній чек у новачків стартує від $3 700. Щотижневі виплати в повному розмірі, прозора система KPI."
+          "text": "Зарплата складається з фіксованої ставки та відсотка від результату. Дохід стартує від $3 700 на місяць і зростає з досвідом та виконанням плану. Щотижневі виплати в повному розмірі, прозора система KPI."
         }
       },
       {
@@ -612,7 +620,7 @@
       background: var(--bg);
       border: 1px solid var(--line);
       border-radius: var(--radius-sm);
-      font-size: 15px;
+      font-size: 16px;
       color: var(--ink);
       transition: all 0.18s var(--ease);
       outline: none;
@@ -627,7 +635,6 @@
     .form-input.error,
     .form-select.error {
       border-color: var(--error);
-      background: var(--error-bg);
     }
     .form-input.error:focus,
     .form-select.error:focus {
@@ -704,9 +711,9 @@
 
     .form-submit {
       width: 100%;
-      background: var(--ink);
-      color: var(--bg);
-      font-size: 15px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 16px;
       font-weight: 600;
       padding: 16px 20px;
       border-radius: 12px;
@@ -717,11 +724,12 @@
       justify-content: center;
       gap: 8px;
       letter-spacing: 0.01em;
+      box-shadow: 0 8px 24px -8px rgba(255,90,31,0.45);
     }
     .form-submit:hover:not(:disabled) {
-      background: var(--accent);
+      background: var(--accent-hover);
       transform: translateY(-1px);
-      box-shadow: 0 8px 24px -6px rgba(255,90,31,0.4);
+      box-shadow: 0 10px 28px -6px rgba(255,90,31,0.5);
     }
     .form-submit:disabled {
       opacity: 0.7;
@@ -1260,6 +1268,172 @@
         scroll-behavior: auto !important;
       }
     }
+
+    /* ============================================
+       CRO ADDITIONS (conversion components)
+       ============================================ */
+    /* Brand wordmark next to dot */
+    .logo-text {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 19px;
+      letter-spacing: -0.02em;
+      color: var(--ink);
+    }
+    .site-footer .logo-text { color: var(--bg); }
+
+    /* Office legitimacy line inside form */
+    .form-office {
+      display: flex;
+      gap: 9px;
+      align-items: flex-start;
+      font-size: 12.5px;
+      line-height: 1.45;
+      color: var(--ink-soft);
+      background: var(--accent-soft);
+      border-radius: var(--radius-sm);
+      padding: 11px 13px;
+      margin-bottom: 20px;
+    }
+    .form-office svg { flex-shrink: 0; margin-top: 1px; color: var(--accent); }
+
+    /* Field hint (e.g. under Telegram) */
+    .field-hint {
+      font-size: 11.5px;
+      color: var(--muted);
+      line-height: 1.45;
+      margin-top: 5px;
+    }
+
+    /* Reassurance row under submit */
+    .form-trust {
+      margin-top: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+    .form-trust-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      font-size: 13px;
+      line-height: 1.4;
+      color: var(--ink-soft);
+      font-weight: 500;
+    }
+    .form-trust-item svg { flex-shrink: 0; margin-top: 2px; color: var(--success); }
+    .form-trust-note {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 4px;
+      line-height: 1.5;
+    }
+    .form-trust-note a { color: var(--muted); text-decoration: underline; }
+
+    /* Mobile value chips above the form (mobile only) */
+    .mobile-offer { display: none; }
+
+    /* Post-FAQ CTA band */
+    .cta-band-section { padding: 0 0 100px; }
+    .cta-band {
+      background: var(--ink);
+      color: var(--bg);
+      border-radius: var(--radius-xl);
+      padding: 56px 40px;
+      text-align: center;
+      max-width: 760px;
+      margin: 0 auto;
+    }
+    .cta-band h2 {
+      font-family: var(--font-display);
+      font-weight: 500;
+      font-size: clamp(28px, 4vw, 42px);
+      letter-spacing: -0.025em;
+      margin-bottom: 12px;
+    }
+    .cta-band p {
+      color: rgba(250,248,243,0.7);
+      font-size: 16px;
+      max-width: 460px;
+      margin: 0 auto 28px;
+      line-height: 1.55;
+    }
+    .cta-band-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 600;
+      font-size: 16px;
+      padding: 16px 30px;
+      border-radius: 12px;
+      transition: all 0.2s var(--ease);
+    }
+    .cta-band-btn:hover {
+      background: var(--accent-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 12px 30px -8px rgba(255,90,31,0.5);
+    }
+
+    /* Sticky mobile CTA bar (mobile only) */
+    .sticky-cta { display: none; }
+
+    @media (max-width: 960px) {
+      .mobile-offer {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 18px;
+      }
+      .mobile-offer .chip {
+        font-size: 12px;
+        font-weight: 500;
+        background: var(--bg);
+        border: 1px solid var(--line);
+        border-radius: 100px;
+        padding: 7px 12px;
+        color: var(--ink-soft);
+        white-space: nowrap;
+      }
+      .sticky-cta {
+        display: flex;
+        position: fixed;
+        left: 0; right: 0; bottom: 0;
+        z-index: 60;
+        padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+        background: rgba(250,248,243,0.92);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border-top: 1px solid var(--line);
+        transform: translateY(130%);
+        transition: transform 0.35s var(--ease);
+      }
+      .sticky-cta.show { transform: translateY(0); }
+      .sticky-cta a {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: var(--accent);
+        color: #fff;
+        border-radius: 12px;
+        padding: 11px 16px;
+        font-weight: 600;
+        font-size: 15px;
+        line-height: 1.2;
+        box-shadow: 0 8px 20px -8px rgba(255,90,31,0.5);
+      }
+      .sticky-cta a small {
+        font-weight: 400;
+        font-size: 11px;
+        opacity: 0.9;
+        margin-top: 2px;
+      }
+      .cta-band { padding: 38px 22px; }
+      .cta-band-section { padding-bottom: 90px; }
+    }
   </style>
 </head>
 <body>
@@ -1271,6 +1445,7 @@
     <div class="container">
       <a href="#" class="logo" aria-label="Головна">
         <span class="logo-dot"></span>
+        <span class="logo-text">Chatman</span>
       </a>
       <div class="header-right">
         <nav class="lang-switch" aria-label="Вибір мови">
@@ -1301,26 +1476,26 @@
           </h1>
 
           <p class="hero-subtitle">
-            Адекватна команда, зі&nbsp;здоровими наставниками та&nbsp;зрозумілими завданнями.
+            Офісна робота у&nbsp;Києві, графік 5/2 з&nbsp;8:00 до&nbsp;18:00. Ставка&nbsp;+&nbsp;%, без досвіду&nbsp;— навчаємо з&nbsp;нуля з&nbsp;оплатою з&nbsp;першого дня.
           </p>
 
           <p class="hero-description">
-            Шукаємо своїх людей. Без нудних щоденних брифів і&nbsp;жорсткого контролю&nbsp;— всього навчимо з&nbsp;нуля. Досвідченим кандидатам пропонуємо індивідуальні умови.
+            Ви&nbsp;відповідаєте клієнтам компанії в&nbsp;чатах і&nbsp;месенджерах за&nbsp;готовими скриптами&nbsp;— консультуєте та&nbsp;супроводжуєте до&nbsp;покупки. Жодних дзвінків, холодних продажів чи&nbsp;інтимних/18+ чатів&nbsp;— лише ділова переписка. Досвідченим кандидатам пропонуємо індивідуальні умови.
           </p>
 
           <ul class="bullets">
             <li class="bullet">
               <span class="bullet-icon">01</span>
               <span>
-                <strong>Ставка + %</strong>
-                <span class="bullet-meta">Середній чек у&nbsp;новачків стартує від&nbsp;$3&nbsp;700</span>
+                <strong>Дохід від&nbsp;$3&nbsp;700/міс</strong>
+                <span class="bullet-meta">Фіксована ставка&nbsp;+&nbsp;% від&nbsp;результату. Щотижневі виплати, прозорий&nbsp;KPI&nbsp;— заробіток видно щодня.</span>
               </span>
             </li>
             <li class="bullet">
               <span class="bullet-icon">02</span>
               <span>
-                <strong>Компенсуємо витрати на&nbsp;ваш переїзд до&nbsp;Києва</strong>
-                <span class="bullet-meta">Компенсуємо витрати на&nbsp;переїзд та&nbsp;допомагаємо з&nbsp;розміщенням</span>
+                <strong>Переїзд до&nbsp;Києва&nbsp;— за&nbsp;наш рахунок</strong>
+                <span class="bullet-meta">Компенсуємо дорогу та&nbsp;допомагаємо знайти житло в&nbsp;перші дні.</span>
               </span>
             </li>
             <li class="bullet">
@@ -1334,14 +1509,21 @@
         </div>
 
         <div class="form-card" id="form">
+          <div class="mobile-offer" aria-hidden="true">
+            <span class="chip">💵 від $3 700/міс</span>
+            <span class="chip">📍 Офіс у Києві</span>
+            <span class="chip">🎓 Без досвіду — навчаємо</span>
+            <span class="chip">⏱ Дзвінок за 30 хв</span>
+          </div>
+
           <div class="form-badge">
             <span class="form-badge-dot"></span>
-            Анкета
+            Набір відкрито
           </div>
 
           <div id="formWrapper">
-            <h2>Заповніть анкету</h2>
-            <p class="form-sub">Ми зв'яжемося протягом&nbsp;30&nbsp;хвилин</p>
+            <h2>Відгукнутися на вакансію</h2>
+            <p class="form-sub">Заповнення&nbsp;— 1&nbsp;хвилина. Передзвонимо протягом&nbsp;30&nbsp;хвилин і&nbsp;відповімо на&nbsp;всі питання, без зобов'язань.</p>
 
             <form id="leadForm" novalidate>
               <input type="hidden" name="lang" value="uk">
@@ -1353,20 +1535,21 @@
 
               <div class="form-row">
                 <label class="form-label" for="age">Скільки вам років</label>
-                <input type="number" id="age" name="age" class="form-input" min="18" max="30" placeholder="18" required>
+                <input type="number" id="age" name="age" class="form-input" min="18" max="30" placeholder="18" required inputmode="numeric">
                 <div class="form-error" id="ageError"></div>
               </div>
 
               <div class="form-row">
                 <label class="form-label" for="phone">Номер телефону</label>
-                <input type="tel" id="phone" name="phone" class="form-input" placeholder="+38 (000) 000-00-00" required autocomplete="tel">
+                <input type="tel" id="phone" name="phone" class="form-input" placeholder="+38 (000) 000-00-00" required autocomplete="tel" inputmode="tel">
                 <div class="form-error" id="phoneError"></div>
               </div>
 
               <div class="form-row">
-                <label class="form-label" for="telegram">Нік у&nbsp;Телеграмі</label>
-                <input type="text" id="telegram" name="telegram" class="form-input" placeholder="@yournikname" required>
+                <label class="form-label" for="telegram">Telegram (для швидкого зв'язку)</label>
+                <input type="text" id="telegram" name="telegram" class="form-input" placeholder="@ivan_kyiv" required autocapitalize="none" autocorrect="off" spellcheck="false">
                 <div class="form-error" id="telegramError"></div>
+                <p class="field-hint">Напишемо першими в&nbsp;Telegram&nbsp;— так швидше, ніж дзвінок. Телефон потрібен лише якщо не&nbsp;відповісте у&nbsp;месенджері.</p>
               </div>
 
               <div class="form-row">
@@ -1377,12 +1560,14 @@
                   <option value="week">Протягом тижня</option>
                   <option value="month">Протягом місяця</option>
                 </select>
+                <div class="form-error" id="readinessError"></div>
               </div>
 
               <label class="form-checkbox" for="consent">
                 <input type="checkbox" id="consent" name="consent" required>
-                <span>Я&nbsp;розумію, що залишаю відгук на&nbsp;офлайн-вакансію з&nbsp;повною зайнятістю, це не&nbsp;віддалена робота.</span>
+                <span>Підтверджую, що подаю заявку на&nbsp;роботу в&nbsp;офісі Києва з&nbsp;повною зайнятістю (5/2, не&nbsp;віддалено) і&nbsp;готовий(-а) до&nbsp;співбесіди.</span>
               </label>
+              <div class="form-error" id="consentError"></div>
 
               <button type="submit" class="form-submit" id="submitBtn">
                 <span class="btn-text">Надіслати заявку</span>
@@ -1391,16 +1576,19 @@
                 </svg>
               </button>
 
-              <p class="form-legal">
-                Натискаючи кнопку, ви погоджуєтеся з&nbsp;обробкою персональних даних
-              </p>
+              <div class="form-trust">
+                <div class="form-trust-item"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M13.5 4.5 6 12 2.5 8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Передзвонимо протягом 30 хвилин</div>
+                <div class="form-trust-item"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M13.5 4.5 6 12 2.5 8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Без спаму й дзвінків-роботів</div>
+                <div class="form-trust-item"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M13.5 4.5 6 12 2.5 8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Співбесіда ні до чого не зобов'язує</div>
+                <p class="form-trust-note">Ваші дані бачить лише наш HR і не передаються третім особам. <a href="/privacy.html">Політика конфіденційності</a></p>
+              </div>
             </form>
           </div>
 
           <div class="form-success" id="formSuccess">
             <div class="form-success-icon">✓</div>
-            <h3>Заявку надіслано</h3>
-            <p>Наш HR зв'яжеться з&nbsp;вами протягом&nbsp;30&nbsp;хвилин у&nbsp;Telegram або за&nbsp;телефоном.</p>
+            <h3>Готово! Заявку прийнято.</h3>
+            <p>HR напише вам у&nbsp;Telegram протягом&nbsp;30&nbsp;хвилин&nbsp;— тримайте месенджер під рукою. Якщо зручніше телефоном&nbsp;— теж зателефонуємо.</p>
           </div>
         </div>
       </div>
@@ -1412,9 +1600,9 @@
        ============================================ -->
   <section class="reviews" id="about">
     <div class="container">
-      <span class="eyebrow">Соціальний доказ</span>
+      <span class="eyebrow">Наша команда</span>
       <h2 class="reviews-title">Відгуки нашої<br>команди</h2>
-      <p class="reviews-sub">Скриншоти реальних переписок та&nbsp;відгуки наших співробітників</p>
+      <p class="reviews-sub">Реальні люди з&nbsp;нашої команди&nbsp;— багато хто прийшов без досвіду й&nbsp;залишився</p>
     </div>
 
     <div class="marquee-wrapper">
@@ -1479,8 +1667,8 @@
 
         <article class="stat-card" data-num="03 / 03">
           <div class="stat-value">$3 700+</div>
-          <div class="stat-label">Середній чек новачка</div>
-          <div class="stat-desc">Стелі немає&nbsp;— все залежить від&nbsp;результату</div>
+          <div class="stat-label">Заробіток за&nbsp;місяць</div>
+          <div class="stat-desc">Ставка&nbsp;+&nbsp;% від&nbsp;результату&nbsp;— залежить від&nbsp;виконання плану</div>
         </article>
       </div>
     </div>
@@ -1539,13 +1727,27 @@
         <div class="faq-list">
           <div class="faq-item">
             <button class="faq-question" aria-expanded="false">
+              <span>Що саме входить у&nbsp;роботу чат-менеджера?</span>
+              <span class="faq-icon"></span>
+            </button>
+            <div class="faq-answer">
+              <div class="faq-answer-inner">
+                <div class="faq-answer-content">
+                  Ви&nbsp;ведете листування з&nbsp;клієнтами компанії: відповідаєте на&nbsp;запитання, консультуєте по&nbsp;продукту та&nbsp;допомагаєте оформити замовлення в&nbsp;нашій CRM за&nbsp;готовими скриптами. Це&nbsp;<strong>не&nbsp;інтимні/18+ чати</strong> і&nbsp;не&nbsp;«спілкування за&nbsp;гроші»&nbsp;— лише звичайна клієнтська підтримка та&nbsp;продажі в&nbsp;месенджерах. Жодних дзвінків і&nbsp;холодних продажів.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <button class="faq-question" aria-expanded="false">
               <span>Як розраховується зарплата?</span>
               <span class="faq-icon"></span>
             </button>
             <div class="faq-answer">
               <div class="faq-answer-inner">
                 <div class="faq-answer-content">
-                  Зарплата складається з&nbsp;фіксованої ставки та&nbsp;відсотка від&nbsp;суми виручки. Середній чек у&nbsp;новачків стартує від&nbsp;$3&nbsp;700. Щотижневі виплати в&nbsp;повному розмірі, прозора система&nbsp;KPI, яку ви&nbsp;бачите щодня.
+                  Зарплата складається з&nbsp;фіксованої ставки та&nbsp;відсотка від&nbsp;результату. Дохід стартує від&nbsp;$3&nbsp;700 на&nbsp;місяць і&nbsp;зростає з&nbsp;досвідом та&nbsp;виконанням плану. Щотижневі виплати в&nbsp;повному розмірі, прозора система&nbsp;KPI, яку ви&nbsp;бачите щодня.
                 </div>
               </div>
             </div>
@@ -1573,7 +1775,7 @@
             <div class="faq-answer">
               <div class="faq-answer-inner">
                 <div class="faq-answer-content">
-                  Ми&nbsp;вітаємо кандидатів з&nbsp;інших міст. Компенсуємо витрати на&nbsp;переїзд та&nbsp;допомагаємо з&nbsp;розміщенням.
+                  Ми&nbsp;вітаємо кандидатів з&nbsp;інших міст. Компенсуємо витрати на&nbsp;переїзд та&nbsp;допомагаємо знайти житло поруч з&nbsp;офісом. Це не&nbsp;кредит і&nbsp;не&nbsp;борг&nbsp;— повертати нічого не&nbsp;потрібно, і&nbsp;жодних штрафів, якщо передумаєте.
                 </div>
               </div>
             </div>
@@ -1642,6 +1844,19 @@
   </section>
 
   <!-- ============================================
+       CTA BAND (после FAQ — пик намерения)
+       ============================================ -->
+  <section class="cta-band-section">
+    <div class="container">
+      <div class="cta-band">
+        <h2>Готові спробувати?</h2>
+        <p>HR передзвонить протягом 30&nbsp;хвилин і&nbsp;відповість на&nbsp;всі питання. Без зобов'язань.</p>
+        <a href="#form" class="cta-band-btn">Залишити заявку →</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================
        SEO TEXT BLOCK
        Видимый текстовый блок с семантикой
        для поисковых роботов
@@ -1659,7 +1874,7 @@
         <p>
           Робота <strong>чат-менеджера в офісі Києва</strong> — це
           повна зайнятість 5/2 з 8:00, оплачуване навчання з індивідуальним підходом
-          та дохід від <strong>$&nbsp;3&nbsp;700 на місяць</strong>. Потолка в доході немає.
+          та дохід від <strong>$&nbsp;3&nbsp;700 на місяць</strong>, що зростає з досвідом і виконанням плану.
         </p>
       </div>
     </div>
@@ -1673,11 +1888,19 @@
       <div class="footer-grid">
         <a href="#" class="logo" aria-label="Головна">
           <span class="logo-dot"></span>
+          <span class="logo-text">Chatman</span>
         </a>
         <span>© 2026 · Київ, Україна · вул. Велика Васильківська, 137-139, Київ, 03150 · <a href="/privacy.html">Політика конфіденційності</a></span>
       </div>
     </div>
   </footer>
+
+  <!-- ============================================
+       STICKY MOBILE CTA (только мобайл)
+       ============================================ -->
+  <div class="sticky-cta" id="stickyCta" aria-hidden="true">
+    <a href="#form">Заповнити анкету <small>1 хв · передзвонимо за 30 хв</small></a>
+  </div>
 
   <!-- ============================================
        CUSTOM ALERT (error toast)
@@ -1964,8 +2187,8 @@
     function validateAge(age) {
       const n = parseInt(age, 10);
       if (!age || isNaN(n)) return 'Вкажіть вік';
-      if (n < 18) return 'На&nbsp;жаль, ви&nbsp;не&nbsp;підходите нам за&nbsp;віком';
-      if (n > 30) return 'На&nbsp;жаль, ви&nbsp;не&nbsp;підходите нам за&nbsp;віком';
+      if (n < 18) return 'Наразі ми&nbsp;беремо кандидатів 18–30&nbsp;років';
+      if (n > 30) return 'Наразі ми&nbsp;беремо кандидатів 18–30&nbsp;років';
       return null;
     }
 
@@ -2085,8 +2308,16 @@
         return;
       }
 
-      if (!readiness) return showAlert('Оберіть, коли готові зустрітися');
-      if (!consent) return showAlert('Підтвердіть згоду');
+      let extraInvalid = false;
+      if (!readiness) { setFieldError('readiness', 'readinessError', 'Оберіть, коли вам зручно поговорити'); extraInvalid = true; }
+      else { setFieldError('readiness', 'readinessError', null); }
+      if (!consent) { setFieldError('consent', 'consentError', 'Поставте позначку, щоб ми могли зв\'язатися'); extraInvalid = true; }
+      else { setFieldError('consent', 'consentError', null); }
+      if (extraInvalid) {
+        const firstShown = document.querySelector('.form-error.show');
+        if (firstShown) firstShown.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
 
       submitBtn.disabled = true;
       submitBtn.querySelector('.btn-text').textContent = 'Надсилання...';
@@ -2143,6 +2374,9 @@
       formWrapper.style.display = 'none';
       formSuccess.classList.add('active');
 
+      const sc = document.getElementById('stickyCta');
+      if (sc) { sc.classList.remove('show'); sc.style.display = 'none'; }
+
       if (customMessage) {
         const p = formSuccess.querySelector('p');
         if (p) p.textContent = customMessage;
@@ -2193,6 +2427,30 @@
       if (v.length >= 8) formatted += '-' + v.slice(8, 10);
       e.target.value = formatted;
     });
+
+    // ============================================
+    // READINESS / CONSENT — очистка inline-помилок при зміні
+    // ============================================
+    ['readiness', 'consent'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('change', () => setFieldError(id, id + 'Error', null));
+    });
+
+    // ============================================
+    // STICKY MOBILE CTA — показ після прокрутки форми
+    // ============================================
+    (function initStickyCta() {
+      const sticky = document.getElementById('stickyCta');
+      const formEl = document.getElementById('form');
+      if (!sticky || !formEl || !('IntersectionObserver' in window)) return;
+      try { if (localStorage.getItem('lead_submitted') === 'true') return; } catch(e) {}
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          sticky.classList.toggle('show', !entry.isIntersecting);
+        });
+      }, { rootMargin: '0px 0px -10% 0px', threshold: 0 });
+      io.observe(formEl);
+    })();
 
   </script>
 
