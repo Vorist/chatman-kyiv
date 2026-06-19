@@ -1541,6 +1541,18 @@
 
             <form id="leadForm" novalidate>
               <input type="hidden" name="lang" value="uk">
+              <!-- Атрибуція ліда (заповнюється скриптом при завантаженні) -->
+              <input type="hidden" name="gclid" id="f_gclid">
+              <input type="hidden" name="fbclid" id="f_fbclid">
+              <input type="hidden" name="ttclid" id="f_ttclid">
+              <input type="hidden" name="utm_source" id="f_utm_source">
+              <input type="hidden" name="utm_medium" id="f_utm_medium">
+              <input type="hidden" name="utm_campaign" id="f_utm_campaign">
+              <input type="hidden" name="utm_term" id="f_utm_term">
+              <input type="hidden" name="utm_content" id="f_utm_content">
+              <input type="hidden" name="referrer" id="f_referrer">
+              <input type="hidden" name="fbc" id="f_fbc">
+              <input type="hidden" name="fbp" id="f_fbp">
               <div class="form-row">
                 <label class="form-label" for="name">Ваше ім'я</label>
                 <input type="text" id="name" name="name" class="form-input" placeholder="Іван Іваненко" required autocomplete="given-name">
@@ -1981,6 +1993,33 @@
     const externalId = getOrCreateExternalId();
 
     // ============================================
+    // АТРИБУЦІЯ ЛІДА — first-touch, зберігається в localStorage
+    // (мітки з URL не губляться, навіть якщо людина походила по сайту)
+    // ============================================
+    function getAttribution() {
+      const KEY = 'lead_attribution';
+      let a = {};
+      try { a = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) {}
+      const p = new URLSearchParams(window.location.search);
+      ['gclid','gbraid','wbraid','fbclid','ttclid','utm_source','utm_medium','utm_campaign','utm_term','utm_content']
+        .forEach(function (k) { const v = p.get(k); if (v && !a[k]) a[k] = v; }); // first-touch: не перезаписуємо
+      if (!a.referrer && document.referrer && document.referrer.indexOf(location.hostname) === -1) a.referrer = document.referrer;
+      if (!a.landing_page) a.landing_page = location.origin + location.pathname;
+      if (!a.first_visit) a.first_visit = new Date().toISOString();
+      try { localStorage.setItem(KEY, JSON.stringify(a)); } catch (e) {}
+      return a;
+    }
+
+    function fillHiddenFields(a) {
+      Object.keys(a).forEach(function (k) { const el = document.getElementById('f_' + k); if (el) el.value = a[k]; });
+      const fbc = document.getElementById('f_fbc'); if (fbc) fbc.value = getCookie('_fbc') || '';
+      const fbp = document.getElementById('f_fbp'); if (fbp) fbp.value = getCookie('_fbp') || '';
+    }
+
+    const attribution = getAttribution();
+    fillHiddenFields(attribution);
+
+    // ============================================
     // META + GA4 EVENT TRACKING
     // ============================================
     const firedEvents = new Set();
@@ -2346,10 +2385,11 @@
         readiness,
         lang: (form.lang && form.lang.value) || 'uk',
         source: 'landing',
+        ...attribution,
         event_id: eventId,
         external_id: externalId,
         url: window.location.href,
-        referrer: document.referrer || null,
+        referrer: attribution.referrer || document.referrer || null,
         fbp: getCookie('_fbp'),
         fbc: getCookie('_fbc'),
         user_agent: navigator.userAgent,

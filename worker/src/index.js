@@ -104,8 +104,25 @@ export default {
     // ============================================
     const enriched = {
       ...data,
+      // Атрибуция — просто проброс. Ключи всегда присутствуют (пустые, если метки не было),
+      // чтобы колонки в Google Sheets не съезжали от лида к лиду.
+      gclid: data.gclid || '',
+      gbraid: data.gbraid || '',
+      wbraid: data.wbraid || '',
+      fbclid: data.fbclid || '',
+      ttclid: data.ttclid || '',
+      utm_source: data.utm_source || '',
+      utm_medium: data.utm_medium || '',
+      utm_campaign: data.utm_campaign || '',
+      utm_term: data.utm_term || '',
+      utm_content: data.utm_content || '',
+      referrer: data.referrer || '',
+      landing_page: data.landing_page || '',
+      fbc: data.fbc || '',
+      fbp: data.fbp || '',
       phone_e164: phoneE164,
       telegram_normalized: tgNormalized,
+      channel: detectChannel(data),
       received_at: new Date().toISOString(),
       ip: request.headers.get('CF-Connecting-IP'),
       country: request.headers.get('CF-IPCountry'),
@@ -145,6 +162,19 @@ function json(data, status, headers = {}) {
     status,
     headers: { 'Content-Type': 'application/json', ...headers },
   });
+}
+
+// Человекочитаемый канал привлечения по меткам атрибуции
+function detectChannel(d) {
+  const utm = (d.utm_source || '').toLowerCase();
+  if (d.gclid || d.gbraid || d.wbraid) return 'Google Ads';
+  if (d.fbclid || /fb|facebook|meta|ig|instagram/.test(utm)) return 'Meta (FB/IG)';
+  if (d.ttclid || /tiktok|^tt$/.test(utm)) return 'TikTok';
+  if (d.utm_source) return d.utm_source;
+  if (d.referrer) {
+    try { return 'Referral: ' + new URL(d.referrer).hostname; } catch (e) { return 'Referral'; }
+  }
+  return 'Direct / Organic';
 }
 
 function normalizePhone(phone) {
