@@ -24,7 +24,8 @@ export async function onRequest(context) {
   const pref = match ? match[1] : null;
 
   if (pref === 'ru') {
-    return Response.redirect(new URL('/ru/', url).toString(), 302);
+    // сохраняем query (?utm_*, fbclid, gclid…), чтобы атрибуция не терялась
+    return Response.redirect(new URL('/ru/' + url.search, url).toString(), 302);
   }
   if (pref === 'uk') {
     return next();
@@ -38,7 +39,8 @@ export async function onRequest(context) {
     return new Response(null, {
       status: 302,
       headers: {
-        'Location': new URL('/ru/', url).toString(),
+        // сохраняем query (?utm_*, fbclid, gclid…), чтобы атрибуция не терялась
+        'Location': new URL('/ru/' + url.search, url).toString(),
         'Set-Cookie': `pref_lang=ru; ${COOKIE_ATTRS}`,
         'Cache-Control': 'no-store',
       },
