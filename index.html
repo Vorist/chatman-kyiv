@@ -1344,8 +1344,23 @@
     }
     .form-trust-note a { color: var(--muted); text-decoration: underline; }
 
-    /* Mobile value chips above the form (mobile only) */
-    .mobile-offer { display: none; }
+    /* Value chips above the form (все екрани) */
+    .mobile-offer {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+    .mobile-offer .chip {
+      font-size: 12px;
+      font-weight: 500;
+      background: var(--bg);
+      border: 1px solid var(--line);
+      border-radius: 100px;
+      padding: 7px 12px;
+      color: var(--ink-soft);
+      white-space: nowrap;
+    }
 
     /* Post-FAQ CTA band */
     .cta-band-section { padding: 0 0 100px; }
@@ -1394,22 +1409,6 @@
     .sticky-cta { display: none; }
 
     @media (max-width: 960px) {
-      .mobile-offer {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        margin-bottom: 18px;
-      }
-      .mobile-offer .chip {
-        font-size: 12px;
-        font-weight: 500;
-        background: var(--bg);
-        border: 1px solid var(--line);
-        border-radius: 100px;
-        padding: 7px 12px;
-        color: var(--ink-soft);
-        white-space: nowrap;
-      }
       .sticky-cta {
         display: flex;
         position: fixed;
@@ -1524,10 +1523,10 @@
 
         <div class="form-card" id="form">
           <div class="mobile-offer" aria-hidden="true">
-            <span class="chip">💵 від $3 700/міс</span>
-            <span class="chip">📍 Офіс у Києві</span>
+            <span class="chip">💰 від $3 700/міс</span>
+            <span class="chip">🏠 Офіс у Києві + житло</span>
             <span class="chip">🎓 Без досвіду — навчаємо</span>
-            <span class="chip">⏱ Дзвінок за 30 хв</span>
+            <span class="chip">⚡ Старт цього тижня</span>
           </div>
 
           <div class="form-badge">

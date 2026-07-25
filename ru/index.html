@@ -1340,7 +1340,23 @@
     }
     .form-trust-note a { color: var(--muted); text-decoration: underline; }
 
-    .mobile-offer { display: none; }
+    /* Value chips above the form (все экраны) */
+    .mobile-offer {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+    .mobile-offer .chip {
+      font-size: 12px;
+      font-weight: 500;
+      background: var(--bg);
+      border: 1px solid var(--line);
+      border-radius: 100px;
+      padding: 7px 12px;
+      color: var(--ink-soft);
+      white-space: nowrap;
+    }
 
     .cta-band-section { padding: 0 0 100px; }
     .cta-band {
@@ -1387,22 +1403,6 @@
     .sticky-cta { display: none; }
 
     @media (max-width: 960px) {
-      .mobile-offer {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        margin-bottom: 18px;
-      }
-      .mobile-offer .chip {
-        font-size: 12px;
-        font-weight: 500;
-        background: var(--bg);
-        border: 1px solid var(--line);
-        border-radius: 100px;
-        padding: 7px 12px;
-        color: var(--ink-soft);
-        white-space: nowrap;
-      }
       .sticky-cta {
         display: flex;
         position: fixed;
@@ -1517,10 +1517,10 @@
 
         <div class="form-card" id="form">
           <div class="mobile-offer" aria-hidden="true">
-            <span class="chip">💵 от $3 700/мес</span>
-            <span class="chip">📍 Офис в Киеве</span>
+            <span class="chip">💰 от $3 700/мес</span>
+            <span class="chip">🏠 Офис в Киеве + жильё</span>
             <span class="chip">🎓 Без опыта — обучаем</span>
-            <span class="chip">⏱ Звонок за 30 мин</span>
+            <span class="chip">⚡ Старт на этой неделе</span>
           </div>
 
           <div class="form-badge">

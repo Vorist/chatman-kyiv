@@ -34,6 +34,11 @@ export default {
       return new Response(null, { headers: corsHeaders });
     }
 
+    // Роут: обратная отправка статуса лида в Meta CAPI (вызывается из Make)
+    if (new URL(request.url).pathname === '/status') {
+      return handleStatusUpdate(request, env, corsHeaders);
+    }
+
     if (request.method !== 'POST') {
       return json({ error: 'Method not allowed' }, 405, corsHeaders);
     }
@@ -162,6 +167,117 @@ function json(data, status, headers = {}) {
     status,
     headers: { 'Content-Type': 'application/json', ...headers },
   });
+}
+
+// ========================================
+// СТАТУСЫ ЛИДОВ → Meta CAPI
+// HR ставит статус в таблице → Make дёргает POST /status →
+// Worker шлёт в Meta событие качества. Meta учится на хороших лидах.
+// ========================================
+
+// Канонические статусы → события Meta. value (USD) — условная ценность
+// этапа воронки, помогает оптимизации по ценности.
+const STATUS_EVENTS = {
+  qualified: { event: 'QualifiedLead', value: 8 },
+  interview: { event: 'InterviewScheduled', value: 15 },
+  hired: { event: 'Hired', value: 40 },
+};
+
+// Возможные написания статуса из таблицы → канонический статус.
+// Негативные статусы → 'skip': событие НЕ шлём (Meta учится на позитивных
+// сигналах; «плохой» лид = лид, который так и не получил событие качества).
+const STATUS_ALIASES = {
+  qualified: ['qualified', 'квал', 'квалифицирован', 'качественный', 'якісний', 'хороший', 'good'],
+  interview: ['interview', 'собеседование', 'співбесіда', 'встреча', 'зустріч'],
+  hired: ['hired', 'вышел', 'вийшов', 'нанят', 'работает', 'працює'],
+  skip: ['junk', 'мусор', 'плохой', 'поганий', 'спам', 'spam', 'нецелевой', 'нецільовий', 'отказ', 'відмова', 'disqualified', 'bad'],
+};
+
+function canonicalStatus(raw) {
+  const s = String(raw || '').toLowerCase().trim();
+  if (!s) return null;
+  for (const [canon, aliases] of Object.entries(STATUS_ALIASES)) {
+    if (canon === s || aliases.includes(s)) return canon;
+  }
+  return null;
+}
+
+async function handleStatusUpdate(request, env, corsHeaders) {
+  if (request.method !== 'POST') {
+    return json({ error: 'Method not allowed' }, 405, corsHeaders);
+  }
+  // Защита: секрет в заголовке (задать: wrangler secret put STATUS_KEY)
+  if (!env.STATUS_KEY || request.headers.get('X-Status-Key') !== env.STATUS_KEY) {
+    return json({ error: 'Unauthorized' }, 401, corsHeaders);
+  }
+  if (!env.FB_PIXEL_ID || !env.FB_ACCESS_TOKEN) {
+    return json({ error: 'FB credentials not configured' }, 500, corsHeaders);
+  }
+
+  let data;
+  try {
+    data = await request.json();
+  } catch (e) {
+    return json({ error: 'Invalid JSON' }, 400, corsHeaders);
+  }
+
+  const canon = canonicalStatus(data.status);
+  if (!canon) {
+    return json({ error: 'Unknown status: ' + (data.status || '(empty)'), known: STATUS_ALIASES }, 400, corsHeaders);
+  }
+  if (canon === 'skip') {
+    // Плохой лид — событие не отправляем, просто подтверждаем обработку
+    return json({ success: true, skipped: true, status: canon }, 200, corsHeaders);
+  }
+
+  if (!data.phone && !data.external_id && !data.fbp && !data.fbc) {
+    return json({ error: 'Need phone / external_id / fbp / fbc to match the lead' }, 400, corsHeaders);
+  }
+
+  const { event: eventName, value } = STATUS_EVENTS[canon];
+
+  // user_data — те же идентификаторы, что были у исходного Lead,
+  // чтобы Meta склеила событие качества с тем же человеком/кликом
+  const userData = { country: [await sha256('ua')] };
+  if (data.phone) {
+    const phoneDigits = normalizePhone(String(data.phone)).replace(/\D/g, '');
+    userData.ph = [await sha256(phoneDigits)];
+  }
+  if (data.external_id) userData.external_id = [await sha256(String(data.external_id))];
+  if (data.fbp) userData.fbp = data.fbp;
+  if (data.fbc) userData.fbc = data.fbc;
+
+  // Детерминированный event_id → повторная отправка того же статуса дедуплицируется
+  const eventId = `st_${canon}_${data.event_id || data.external_id || Date.now()}`;
+
+  const payload = {
+    data: [{
+      event_name: eventName,
+      event_time: Math.floor(Date.now() / 1000),
+      action_source: 'system_generated',
+      event_id: eventId,
+      user_data: userData,
+      custom_data: {
+        lead_status: canon,
+        currency: 'USD',
+        value,
+      },
+    }],
+  };
+
+  const apiUrl = `https://graph.facebook.com/v19.0/${env.FB_PIXEL_ID}/events?access_token=${env.FB_ACCESS_TOKEN}`;
+  const res = await fetch(apiUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const resData = await res.json().catch(() => ({}));
+  console.log('Status → CAPI:', canon, res.status, JSON.stringify(resData));
+
+  if (!res.ok) {
+    return json({ error: 'Meta CAPI error', details: resData }, 502, corsHeaders);
+  }
+  return json({ success: true, status: canon, event: eventName, event_id: eventId, fb: resData }, 200, corsHeaders);
 }
 
 // Человекочитаемый канал привлечения по меткам атрибуции
