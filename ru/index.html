@@ -107,6 +107,10 @@
     var evs = ['scroll', 'pointerdown', 'keydown', 'touchstart', 'mousemove'];
     function onFirst() { evs.forEach(function (e) { window.removeEventListener(e, onFirst); }); loadTrackers(); }
     evs.forEach(function (e) { window.addEventListener(e, onFirst, { passive: true, once: true }); });
+    // Переход с рекламы Google (gclid/gbraid/wbraid в URL) — грузим сразу,
+    // чтобы GA4 гарантированно связал сессию с кликом (иначе конверсия падает в Direct
+    // и не экспортируется в Google Ads). Для остальных посетителей — как раньше.
+    if (/[?&](gclid|gbraid|wbraid)=/.test(location.search)) { loadTrackers(); }
     setTimeout(loadTrackers, 3500);
   })();
   </script>
