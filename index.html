@@ -2137,6 +2137,95 @@
     }
 
     // ============================================
+    // FORM FUNNEL TRACKING (GA4) — на каком шаге уходит лид
+    // form_step           — первый фокус на поле (воронка name → age → phone → telegram → readiness → consent)
+    // form_error          — валидация не пропустила поле (какое и почему)
+    // form_submit_attempt — нажал «Отправить»; результат в form_result
+    // form_abandon        — ушёл со страницы, начав заполнять, но не отправив
+    // ============================================
+    const FORM_STEPS = ['name', 'age', 'phone', 'telegram', 'readiness', 'consent'];
+    const formFunnel = {
+      started: false, submitted: false, abandonSent: false,
+      reached: new Set(), errorsSent: new Set(),
+      lastField: null, lastErrorField: null, lastError: null, submitAttempts: 0
+    };
+
+    function gaFormEvent(name, params) {
+      if (typeof gtag !== 'function') return;
+      gtag('event', name, params);
+      console.log('[GA4]', name, params);
+    }
+
+    function formStepOf(id) { return FORM_STEPS.indexOf(id) + 1; }
+
+    function cleanErrorText(message) {
+      return String(message || '').replace(/&nbsp;/g, ' ').replace(/<[^>]*>/g, '').trim().slice(0, 100);
+    }
+
+    function markFormField(id) {
+      formFunnel.started = true;
+      formFunnel.lastField = id;
+      if (formFunnel.reached.has(id)) return;
+      formFunnel.reached.add(id);
+      gaFormEvent('form_step', { form_field: id, form_step_index: formStepOf(id) });
+    }
+
+    FORM_STEPS.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      // input/change нужны для select и checkbox — Safari не даёт им фокус по клику
+      ['focus', 'input', 'change'].forEach(evt => el.addEventListener(evt, () => markFormField(id)));
+    });
+
+    function trackFormError(fieldId, message) {
+      const text = cleanErrorText(message);
+      formFunnel.lastErrorField = fieldId;
+      formFunnel.lastError = text;
+      const key = fieldId + '|' + text;
+      if (formFunnel.errorsSent.has(key)) return; // одна и та же ошибка — один раз за визит
+      formFunnel.errorsSent.add(key);
+      gaFormEvent('form_error', { form_field: fieldId, form_step_index: formStepOf(fieldId), form_error: text });
+    }
+
+    function trackSubmitAttempt(result, fieldId, message) {
+      const params = { form_result: result, form_submit_attempts: formFunnel.submitAttempts };
+      if (fieldId) { params.form_field = fieldId; params.form_step_index = formStepOf(fieldId); }
+      if (message) params.form_error = cleanErrorText(message);
+      if (result !== 'success' && result !== 'duplicate') {
+        formFunnel.lastErrorField = fieldId || 'submit';
+        formFunnel.lastError = params.form_error || result;
+      }
+      gaFormEvent('form_submit_attempt', params);
+    }
+
+    function trackFormAbandon() {
+      if (!formFunnel.started || formFunnel.submitted || formFunnel.abandonSent) return;
+      formFunnel.abandonSent = true;
+      const filled = FORM_STEPS.filter(id => {
+        const el = document.getElementById(id);
+        return el && (el.type === 'checkbox' ? el.checked : el.value.trim() !== '');
+      });
+      let furthest = null;
+      FORM_STEPS.forEach(id => { if (formFunnel.reached.has(id)) furthest = id; });
+      gaFormEvent('form_abandon', {
+        form_field: formFunnel.lastField,
+        form_step_index: formStepOf(formFunnel.lastField),
+        form_furthest_field: furthest,
+        form_filled_fields: filled.join(',') || '(none)',
+        form_filled_count: filled.length,
+        form_error_field: formFunnel.lastErrorField || '(none)',
+        form_error: formFunnel.lastError || '(none)',
+        form_submit_attempts: formFunnel.submitAttempts,
+        transport_type: 'beacon'
+      });
+    }
+    // visibilitychange → hidden надёжнее unload на мобильных; pagehide — страховка
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') trackFormAbandon();
+    });
+    window.addEventListener('pagehide', trackFormAbandon);
+
+    // ============================================
     // VALIDATION HELPERS
     // ============================================
     function setFieldError(fieldId, errorId, message) {
@@ -2256,7 +2345,7 @@
       }
       const operator = digits.slice(3, 5);
       const validOperators = [
-        '39','50','63','66','67','68','73',
+        '39','50','63','66','67','68','73','75','77',
         '91','92','93','94','95','96','97','98','99'
       ];
       if (!validOperators.includes(operator)) {
@@ -2300,6 +2389,7 @@
         if (id === 'phone') err = validatePhone(v);
         if (id === 'telegram') err = validateTelegram(v);
         if (err) {
+          trackFormError(id, err);
           const errEl = document.getElementById(id + 'Error');
           if (errEl) errEl.innerHTML = err;
           document.getElementById(id).classList.add('error');
@@ -2332,6 +2422,7 @@
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
+      formFunnel.submitAttempts++;
 
       const name = form.name.value;
       const age = form.age.value;
@@ -2350,6 +2441,7 @@
       Object.keys(errors).forEach(key => {
         const errEl = document.getElementById(key + 'Error');
         if (errors[key]) {
+          trackFormError(key, errors[key]);
           document.getElementById(key).classList.add('error');
           errEl.innerHTML = errors[key];
           errEl.classList.add('show');
@@ -2359,6 +2451,8 @@
       });
 
       if (Object.values(errors).some(err => err !== null)) {
+        const firstKey = Object.keys(errors).find(k => errors[k]);
+        trackSubmitAttempt('validation_error', firstKey, errors[firstKey]);
         const firstError = document.querySelector('.form-input.error, .form-select.error');
         if (firstError) firstError.focus();
         return;
@@ -2370,6 +2464,10 @@
       if (!consent) { setFieldError('consent', 'consentError', 'Поставте позначку, щоб ми могли зв\'язатися'); extraInvalid = true; }
       else { setFieldError('consent', 'consentError', null); }
       if (extraInvalid) {
+        const extraField = !readiness ? 'readiness' : 'consent';
+        const extraMsg = document.getElementById(extraField + 'Error').textContent;
+        trackFormError(extraField, extraMsg);
+        trackSubmitAttempt('validation_error', extraField, extraMsg);
         const firstShown = document.querySelector('.form-error.show');
         if (firstShown) firstShown.scrollIntoView({ behavior: 'smooth', block: 'center' });
         return;
@@ -2413,14 +2511,17 @@
         if (result.duplicate) {
           submitBtn.disabled = false;
           submitBtn.querySelector('.btn-text').textContent = 'Надіслати заявку';
+          trackSubmitAttempt('duplicate');
           handleSuccess(eventId, result.message);
           return;
         }
 
+        trackSubmitAttempt('success');
         handleSuccess(eventId);
 
       } catch (err) {
         console.error(err);
+        trackSubmitAttempt('request_failed', null, err && err.message);
         submitBtn.disabled = false;
         submitBtn.querySelector('.btn-text').textContent = 'Надіслати заявку';
         showAlert('Не вдалося надіслати. Перевірте інтернет і спробуйте ще раз.');
@@ -2428,6 +2529,7 @@
     });
 
     function handleSuccess(eventId, customMessage) {
+      formFunnel.submitted = true;
       formWrapper.style.display = 'none';
       formSuccess.classList.add('active');
 
