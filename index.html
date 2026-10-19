@@ -2138,14 +2138,21 @@
 
     // ============================================
     // FORM FUNNEL TRACKING (GA4) — на каком шаге уходит лид
-    // form_step           — первый фокус на поле (воронка name → age → phone → telegram → readiness → consent)
+    // form_step           — дошёл до поля (воронка name → age → phone → telegram → readiness → consent;
+    //                       шаги монотонные: фокус на поле N засчитывает и все поля до него)
     // form_error          — валидация не пропустила поле (какое и почему)
     // form_submit_attempt — нажал «Отправить»; результат в form_result
-    // form_abandon        — ушёл со страницы, начав заполнять, но не отправив
+    // form_abandon        — свернул/закрыл страницу, начав заполнять, но не отправив
+    //                       (на мобильных это и переключение в другое приложение)
+    // form_resume         — вернулся на страницу после form_abandon; чистые уходы = abandon − resume
+    // Основная метрика — воронка по form_step + form_error: они уходят, пока страница активна.
+    // form_abandon на iOS может не успеть отправиться — читать как «не меньше чем».
+    // Авто-события GA4 form_start/form_submit для этой формы не показательны (submit отменяется
+    // через preventDefault) — смотреть form_submit_attempt{form_result=success} и generate_lead.
     // ============================================
     const FORM_STEPS = ['name', 'age', 'phone', 'telegram', 'readiness', 'consent'];
     const formFunnel = {
-      started: false, submitted: false, abandonSent: false,
+      started: false, submitting: false, submitted: false, abandonSent: false, abandonSeq: 0,
       reached: new Set(), errorsSent: new Set(),
       lastField: null, lastErrorField: null, lastError: null, submitAttempts: 0
     };
@@ -2159,22 +2166,28 @@
     function formStepOf(id) { return FORM_STEPS.indexOf(id) + 1; }
 
     function cleanErrorText(message) {
-      return String(message || '').replace(/&nbsp;/g, ' ').replace(/<[^>]*>/g, '').trim().slice(0, 100);
+      // &nbsp; из строк и U+00A0 из textContent — в обычный пробел, чтобы одна ошибка не стала двумя значениями в GA4
+      return String(message || '').replace(/&nbsp;| /g, ' ').replace(/<[^>]*>/g, '').trim().slice(0, 100);
     }
 
     function markFormField(id) {
       formFunnel.started = true;
       formFunnel.lastField = id;
-      if (formFunnel.reached.has(id)) return;
-      formFunnel.reached.add(id);
-      gaFormEvent('form_step', { form_field: id, form_step_index: formStepOf(id) });
+      // монотонно: дошёл до поля N — значит прошёл и все поля до него (автозаполнение, клик не по порядку)
+      FORM_STEPS.slice(0, FORM_STEPS.indexOf(id) + 1).forEach(step => {
+        if (formFunnel.reached.has(step)) return;
+        formFunnel.reached.add(step);
+        gaFormEvent('form_step', { form_field: step, form_step_index: formStepOf(step) });
+      });
     }
 
     FORM_STEPS.forEach(id => {
       const el = document.getElementById(id);
       if (!el) return;
-      // input/change нужны для select и checkbox — Safari не даёт им фокус по клику
-      ['focus', 'input', 'change'].forEach(evt => el.addEventListener(evt, () => markFormField(id)));
+      // текстовые поля — только по фокусу (автозаполнение браузера шлёт input без фокуса);
+      // select и checkbox — ещё и по input/change: Safari не даёт им фокус по клику
+      const evts = (el.tagName === 'SELECT' || el.type === 'checkbox') ? ['focus', 'input', 'change'] : ['focus'];
+      evts.forEach(evt => el.addEventListener(evt, () => markFormField(id)));
     });
 
     function trackFormError(fieldId, message) {
@@ -2198,32 +2211,62 @@
       gaFormEvent('form_submit_attempt', params);
     }
 
+    // ошибка, которая видна на экране прямо сейчас (первая по порядку полей)
+    function visibleFormError() {
+      for (const id of FORM_STEPS) {
+        const errEl = document.getElementById(id + 'Error');
+        if (errEl && errEl.classList.contains('show') && errEl.textContent.trim()) {
+          return { field: id, text: cleanErrorText(errEl.textContent) };
+        }
+      }
+      return null;
+    }
+
     function trackFormAbandon() {
-      if (!formFunnel.started || formFunnel.submitted || formFunnel.abandonSent) return;
+      if (!formFunnel.started || formFunnel.submitting || formFunnel.submitted || formFunnel.abandonSent) return;
       formFunnel.abandonSent = true;
+      formFunnel.abandonSeq++;
       const filled = FORM_STEPS.filter(id => {
         const el = document.getElementById(id);
-        return el && (el.type === 'checkbox' ? el.checked : el.value.trim() !== '');
+        if (!el) return false;
+        if (el.type === 'checkbox') return el.checked;
+        if (id === 'phone') return el.value.replace(/\D/g, '').replace(/^38/, '').length > 0; // форматтер оставляет «+38»
+        return el.value.trim() !== '';
       });
       let furthest = null;
       FORM_STEPS.forEach(id => { if (formFunnel.reached.has(id)) furthest = id; });
+      // в form_abandon пишем ошибку, которую человек видел в момент ухода (или ошибку отправки);
+      // история всех ошибок — в form_error
+      const shown = visibleFormError();
+      const submitFailed = formFunnel.lastErrorField === 'submit';
       gaFormEvent('form_abandon', {
         form_field: formFunnel.lastField,
         form_step_index: formStepOf(formFunnel.lastField),
         form_furthest_field: furthest,
         form_filled_fields: filled.join(',') || '(none)',
         form_filled_count: filled.length,
-        form_error_field: formFunnel.lastErrorField || '(none)',
-        form_error: formFunnel.lastError || '(none)',
+        form_error_field: shown ? shown.field : (submitFailed ? 'submit' : '(none)'),
+        form_error: shown ? shown.text : (submitFailed ? formFunnel.lastError : '(none)'),
         form_submit_attempts: formFunnel.submitAttempts,
-        transport_type: 'beacon'
+        form_abandon_seq: formFunnel.abandonSeq
       });
     }
-    // visibilitychange → hidden надёжнее unload на мобильных; pagehide — страховка
+
+    function trackFormResume() {
+      if (!formFunnel.abandonSent || formFunnel.submitted) return;
+      formFunnel.abandonSent = false; // перевзводим: следующий уход снова отправит form_abandon с актуальным состоянием
+      gaFormEvent('form_resume', {
+        form_field: formFunnel.lastField,
+        form_step_index: formStepOf(formFunnel.lastField),
+        form_abandon_seq: formFunnel.abandonSeq
+      });
+    }
+    // visibilitychange надёжнее unload на мобильных; pagehide/pageshow — страховка и возврат из bfcache
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'hidden') trackFormAbandon();
+      if (document.visibilityState === 'hidden') trackFormAbandon(); else trackFormResume();
     });
     window.addEventListener('pagehide', trackFormAbandon);
+    window.addEventListener('pageshow', e => { if (e.persisted) trackFormResume(); });
 
     // ============================================
     // VALIDATION HELPERS
@@ -2403,6 +2446,7 @@
       if (!v) return;
       const err = validateAge(v);
       if (err) {
+        if (v.trim().length >= 2) trackFormError('age', err); // одна цифра — ещё не ввод, не считаем ошибкой
         const errEl = document.getElementById('ageError');
         errEl.innerHTML = err;
         e.target.classList.add('error');
@@ -2464,10 +2508,10 @@
       if (!consent) { setFieldError('consent', 'consentError', 'Поставте позначку, щоб ми могли зв\'язатися'); extraInvalid = true; }
       else { setFieldError('consent', 'consentError', null); }
       if (extraInvalid) {
+        if (!readiness) trackFormError('readiness', document.getElementById('readinessError').textContent);
+        if (!consent) trackFormError('consent', document.getElementById('consentError').textContent);
         const extraField = !readiness ? 'readiness' : 'consent';
-        const extraMsg = document.getElementById(extraField + 'Error').textContent;
-        trackFormError(extraField, extraMsg);
-        trackSubmitAttempt('validation_error', extraField, extraMsg);
+        trackSubmitAttempt('validation_error', extraField, document.getElementById(extraField + 'Error').textContent);
         const firstShown = document.querySelector('.form-error.show');
         if (firstShown) firstShown.scrollIntoView({ behavior: 'smooth', block: 'center' });
         return;
@@ -2497,6 +2541,7 @@
         timestamp: Math.floor(Date.now() / 1000)
       };
 
+      formFunnel.submitting = true; // пока ждём ответ — это не уход
       try {
         const res = await fetch(WORKER_URL, {
           method: 'POST',
@@ -2525,6 +2570,9 @@
         submitBtn.disabled = false;
         submitBtn.querySelector('.btn-text').textContent = 'Надіслати заявку';
         showAlert('Не вдалося надіслати. Перевірте інтернет і спробуйте ще раз.');
+      } finally {
+        formFunnel.submitting = false;
+        if (document.visibilityState === 'hidden') trackFormAbandon(); // ответ пришёл, когда страница уже свёрнута
       }
     });
 
