@@ -98,7 +98,8 @@ export async function onRequest(context) {
       tiktok_code: tt.code,
     }, 200);
   } catch (e) {
-    return json({ error: 'TikTok EAPI error', details: String((e && e.message) || e).slice(0, 300) }, 502);
+    // 424, а не 502: ответ с кодом 502 Cloudflare подменяет своей страницей ошибки, и причина теряется
+    return json({ error: 'TikTok EAPI error', details: String((e && e.message) || e).slice(0, 300) }, 424);
   }
 }
 
