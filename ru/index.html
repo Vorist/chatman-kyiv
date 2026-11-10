@@ -89,7 +89,6 @@
       i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);ttq.instance=function(t){for(
       var e=ttq._i[t]||[],n=0;n<ttq.methods.length;n++)ttq.setAndDefer(e,ttq.methods[n]);return e},ttq.load=function(e,n){var r="https://analytics.tiktok.com/i18n/pixel/events.js",o=n&&n.partner;ttq._i=ttq._i||{},ttq._i[e]=[],ttq._i[e]._u=r,ttq._t=ttq._t||{},ttq._t[e]=+new Date,ttq._o=ttq._o||{},ttq._o[e]=n||{};n=document.createElement("script")
       ;n.type="text/javascript",n.async=!0,n.src=r+"?sdkid="+e+"&lib="+t;e=document.getElementsByTagName("script")[0];e.parentNode.insertBefore(n,e)};
-      ttq.page();
     }(window, document, 'ttq');
 
     // --- реальная загрузка сетей: первое действие ИЛИ 3.5 с ---
@@ -102,7 +101,7 @@
       var f = document.createElement('script'); f.async = true;
       f.src = 'https://connect.facebook.net/en_US/fbevents.js';
       document.head.appendChild(f);
-      try { if (window.ttq && ttq.load) ttq.load('D7P7523C77U02PK9RRH0'); } catch (e) {}
+      try { if (window.ttq && ttq.load) { ttq.load('DBP6LBRC77U5934IJN90'); ttq.page(); } } catch (e) {}
     }
     var evs = ['scroll', 'pointerdown', 'keydown', 'touchstart', 'mousemove'];
     function onFirst() { evs.forEach(function (e) { window.removeEventListener(e, onFirst); }); loadTrackers(); }
@@ -2030,6 +2029,66 @@
       'Contact': 'contact'
     };
 
+    // ============================================
+    // TIKTOK PIXEL — те же события воронки, что и в Meta/GA4
+    // Lead уходит с тем же event_id, что и серверное событие (Events API) → TikTok их склеивает.
+    // Любая ошибка TikTok глушится: пиксель не имеет права помешать форме.
+    // ============================================
+    const ttEventMap = {
+      'ViewContent': 'ViewContent',
+      'InitiateCheckout': 'InitiateCheckout',
+      'Contact': 'Contact',
+      'Scroll50': 'Scroll50',
+      'Scroll75': 'Scroll75'
+    };
+
+    function trackTikTok(eventName, params, eventId) {
+      try {
+        if (!window.ttq || typeof window.ttq.track !== 'function') return;
+        const props = Object.assign({ content_id: 'chat-manager-kyiv', content_type: 'product' }, params || {});
+        if (eventId) window.ttq.track(eventName, props, { event_id: eventId });
+        else window.ttq.track(eventName, props);
+        console.log('[TikTok]', eventName, eventId || '');
+      } catch (e) {}
+    }
+
+    function sha256Hex(text) {
+      return crypto.subtle.digest('SHA-256', new TextEncoder().encode(String(text))).then(function (buf) {
+        return Array.prototype.map.call(new Uint8Array(buf), function (b) { return ('0' + b.toString(16)).slice(-2); }).join('');
+      });
+    }
+
+    // Самый свежий клик TikTok: метка в текущем URL → cookie пикселя TikTok
+    // (значение + «.метка времени») → первое касание из localStorage
+    function latestTtclid() {
+      try {
+        const fromUrl = new URLSearchParams(window.location.search).get('ttclid');
+        if (fromUrl) return fromUrl;
+        const v = getCookie('ttclid');
+        if (v) return decodeURIComponent(v).replace(/\.\d{10,}$/, '');
+      } catch (e) {}
+      return attribution.ttclid || '';
+    }
+
+    // Lead в TikTok: телефон (+380…) и external_id хешируем SHA-256 так же, как воркер.
+    // Если хеширование недоступно — телефон захеширует сам пиксель, событие всё равно уйдёт.
+    function trackTikTokLead(eventId, phoneE164) {
+      const props = { content_name: 'Chat Manager Kyiv', content_category: 'HR Lead', value: 4.00, currency: 'USD' };
+      const fire = function (ids) {
+        try {
+          if (ids && window.ttq && typeof window.ttq.identify === 'function') window.ttq.identify(ids);
+        } catch (e) {}
+        trackTikTok('Lead', props, eventId);
+      };
+      try {
+        if (!phoneE164) { fire(null); return; }
+        if (!(window.crypto && window.crypto.subtle && window.TextEncoder)) { fire({ phone_number: phoneE164 }); return; }
+        Promise.all([sha256Hex(phoneE164), sha256Hex(externalId)])
+          .then(function (h) { fire({ phone_number: h[0], external_id: h[1] }); })
+          .catch(function () { fire({ phone_number: phoneE164 }); });
+      } catch (e) { fire(null); }
+    }
+
     function trackMetaEvent(eventName, params = {}, options = {}) {
       if (firedEvents.has(eventName)) return;
       firedEvents.add(eventName);
@@ -2042,6 +2101,7 @@
         const gaName = gaEventMap[eventName] || eventName.toLowerCase();
         gtag('event', gaName, params);
       }
+      if (ttEventMap[eventName]) trackTikTok(ttEventMap[eventName], params);
       console.log('[Event]', eventName, params);
     }
 
@@ -2531,6 +2591,8 @@
         referrer: attribution.referrer || document.referrer || null,
         fbp: getCookie('_fbp'),
         fbc: getCookie('_fbc'),
+        ttp: getCookie('_ttp'),
+        ttclid: latestTtclid(),
         user_agent: navigator.userAgent,
         timestamp: Math.floor(Date.now() / 1000)
       };
@@ -2556,7 +2618,7 @@
         }
 
         trackSubmitAttempt('success');
-        handleSuccess(eventId);
+        handleSuccess(eventId, null, '+' + phone.replace(/\D/g, ''));
 
       } catch (err) {
         console.error(err);
@@ -2570,7 +2632,7 @@
       }
     });
 
-    function handleSuccess(eventId, customMessage) {
+    function handleSuccess(eventId, customMessage, phoneE164) {
       formFunnel.submitted = true;
       formWrapper.style.display = 'none';
       formSuccess.classList.add('active');
@@ -2605,10 +2667,7 @@
           });
           console.log('[GA4] generate_lead', { event_id: eventId });
         }
-        if (typeof ttq !== 'undefined') {
-          ttq.track('SubmitForm');
-          console.log('[TikTok] SubmitForm');
-        }
+        trackTikTokLead(eventId, phoneE164);
       }
 
       document.getElementById('form').scrollIntoView({ behavior: 'smooth', block: 'center' });

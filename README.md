@@ -2,7 +2,7 @@
 
 Одностраничный лендинг для HR lead generation. Стек:
 - **HTML + CSS + Vanilla JS** — статика, хостится на Cloudflare Pages
-- **Cloudflare Worker** — обработчик формы (Make webhook + Meta CAPI)
+- **Cloudflare Worker** — обработчик формы (Make webhook + Meta CAPI + TikTok Events API)
 
 ## 📁 Структура проекта
 
@@ -113,7 +113,22 @@ npx wrangler secret put FB_ACCESS_TOKEN
 # Твой домен лендинга (важно для CORS!)
 npx wrangler secret put ALLOWED_ORIGIN
 # → введи: https://YOUR-DOMAIN.com
+
+# TikTok Events API: токен из TikTok Events Manager
+# (пиксель → Settings → Events API → Generate Access Token)
+npx wrangler secret put TIKTOK_ACCESS_TOKEN
 ```
+
+Код пикселя TikTok зашит в `worker/src/index.js` (`TIKTOK_PIXEL_CODE`) — он публичный,
+секретом является только токен. Пока токена нет, Worker просто не шлёт события в TikTok,
+заявки при этом работают как обычно.
+
+Статусы лидов из таблицы уходят в TikTok через роут `POST /status/tiktok` — его вызывает
+сценарий Make «Landing ЧАТЫ → TikTok Events API» (Qualified → `CompleteRegistration`,
+Converted → `ApplicationApproval`). Отдельных секретов для этого не нужно.
+
+Проверить, что выкатилась новая версия: в ответе Worker есть заголовок
+`X-Worker-Version` (например, `curl -i -X OPTIONS https://…workers.dev`).
 
 ### Шаг 4. Деплой Worker
 
@@ -148,7 +163,8 @@ npx wrangler tail
 1. **Форма → Make** — зайди в Make сценарий, отправь заявку, убедись что в Google Sheets появилась строка
 2. **Форма → Meta Pixel** — Events Manager → Test Events → вставь свой домен → заполни форму → событие `Lead` должно прилететь
 3. **Форма → CAPI** — Events Manager → Overview → в графике `Lead` должны быть события с пометкой **Server** (не только Browser)
-4. **Lighthouse** — Chrome DevTools → Lighthouse → Run audit. Цель: 90+ по всем параметрам
+4. **Форма → TikTok** — TikTok Events Manager → пиксель → Test Events: событие `Lead` должно прийти и из браузера, и с сервера (Events API) с одинаковым `event_id`. Для серверной проверки временно задай `npx wrangler secret put TIKTOK_TEST_EVENT_CODE` (код со вкладки Test Events), после проверки удали: `npx wrangler secret delete TIKTOK_TEST_EVENT_CODE`
+5. **Lighthouse** — Chrome DevTools → Lighthouse → Run audit. Цель: 90+ по всем параметрам
 
 ---
 

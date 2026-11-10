@@ -6,20 +6,40 @@
  *   - Нормализует телеграм: @ убирается, всё в lowercase
  *   - TTL записей: 90 дней
  *
- * Отправляет параллельно в 3 системы:
+ * Отправляет в 3 системы:
  *   1. Make.com webhook → Google Sheets + Telegram
  *   2. Meta CAPI
- *   3. TikTok Events API
+ *   3. TikTok Events API (в фоне — ответ форме его не ждёт)
+ *
+ * Роуты:
+ *   POST /               — заявка с лендинга
+ *   POST /status         — статус лида → Meta CAPI (нужен STATUS_KEY)
+ *   POST /status/tiktok  — статус лида → TikTok Events API (вызывает Make)
  *
  * Секреты (wrangler secret put):
- *   MAKE_WEBHOOK_URL, FB_PIXEL_ID, FB_ACCESS_TOKEN
- *   ALLOWED_ORIGIN, TIKTOK_PIXEL_ID, TIKTOK_ACCESS_TOKEN
+ *   MAKE_WEBHOOK_URL, FB_PIXEL_ID, FB_ACCESS_TOKEN, ALLOWED_ORIGIN
+ *   TIKTOK_ACCESS_TOKEN  — токен Events API из TikTok Events Manager
+ * Необязательные:
+ *   TIKTOK_PIXEL_CODE       — другой пиксель вместо зашитого ниже
+ *   TIKTOK_TEST_EVENT_CODE  — код из вкладки Test Events (на время проверки)
+ *   STATUS_KEY              — свой ключ для /status и /status/tiktok
  *
  * KV namespace:
  *   LEADS_DEDUP — хранит хеши телефонов и телеграм-ников
  */
 
 const KV_TTL_SECONDS = 90 * 24 * 60 * 60; // 90 дней
+
+// Версия кода — видна в заголовке X-Worker-Version любого ответа (проверка деплоя)
+const WORKER_VERSION = '2026-11-10-tiktok';
+
+// TikTok: код пикселя публичный (он же стоит в коде страницы), секрет — только токен
+const TIKTOK_PIXEL_CODE = 'DBP6LBRC77U5934IJN90';
+const TIKTOK_API_URL = 'https://business-api.tiktok.com/open_api/v1.3/event/track/';
+
+// SHA-256 ключа, которым Make подписывает запросы на /status/tiktok.
+// Сам ключ хранится только в сценарии Make; здесь лежит лишь его хеш.
+const STATUS_KEY_SHA256 = '0bf00d1825c295f2a459c82e92a3e86793a534dadf0f8ca4ba3f41bffd7542e9';
 
 export default {
   async fetch(request, env, ctx) {
@@ -28,14 +48,22 @@ export default {
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
       'Access-Control-Max-Age': '86400',
+      'X-Worker-Version': WORKER_VERSION,
     };
 
     if (request.method === 'OPTIONS') {
       return new Response(null, { headers: corsHeaders });
     }
 
+    const pathname = new URL(request.url).pathname;
+
+    // Роут: статус лида из таблицы → TikTok Events API (вызывается из Make)
+    if (pathname === '/status/tiktok') {
+      return handleTikTokStatus(request, env, corsHeaders);
+    }
+
     // Роут: обратная отправка статуса лида в Meta CAPI (вызывается из Make)
-    if (new URL(request.url).pathname === '/status') {
+    if (pathname === '/status') {
       return handleStatusUpdate(request, env, corsHeaders);
     }
 
@@ -134,21 +162,26 @@ export default {
       user_agent_server: request.headers.get('User-Agent'),
     };
 
-    const [makeRes, capiRes, tiktokRes] = await Promise.allSettled([
+    // TikTok Events API — в фоне: ответ форме не ждёт TikTok, и никакая
+    // ошибка TikTok не может повлиять на сохранение лида.
+    if (env.TIKTOK_ACCESS_TOKEN) {
+      const tiktokJob = sendToTikTok(env, enriched, request)
+        .then(() => console.log('TikTok EAPI: ok'))
+        .catch((e) => console.log('TikTok EAPI: failed', e && e.message));
+      if (ctx && typeof ctx.waitUntil === 'function') ctx.waitUntil(tiktokJob);
+    }
+
+    const [makeRes, capiRes] = await Promise.allSettled([
       env.MAKE_WEBHOOK_URL
         ? sendToMake(env.MAKE_WEBHOOK_URL, enriched)
         : Promise.resolve(null),
       env.FB_PIXEL_ID && env.FB_ACCESS_TOKEN
         ? sendToCAPI(env, enriched, request)
         : Promise.resolve(null),
-      env.TIKTOK_PIXEL_ID && env.TIKTOK_ACCESS_TOKEN
-        ? sendToTikTok(env, enriched, request)
-        : Promise.resolve(null),
     ]);
 
     console.log('Make:', makeRes.status, makeRes.reason?.message || 'ok');
     console.log('Meta CAPI:', capiRes.status, capiRes.reason?.message || 'ok');
-    console.log('TikTok EAPI:', tiktokRes.status, tiktokRes.reason?.message || 'ok');
 
     if (makeRes.status === 'rejected') {
       return json({ error: 'Failed to save lead' }, 500, corsHeaders);
@@ -378,69 +411,226 @@ async function sendToCAPI(env, data, request) {
   return resData;
 }
 
-async function sendToTikTok(env, data, request) {
-  const phoneDigits = data.phone_e164.replace(/\D/g, '');
-  const phoneHash = await sha256(phoneDigits);
-  const externalIdHash = data.external_id ? await sha256(data.external_id) : null;
+// ========================================
+// TIKTOK EVENTS API  (POST /open_api/v1.3/event/track/, формат Events API 2.0)
+// ========================================
 
-  const ip = request.headers.get('CF-Connecting-IP');
-  const userAgent = data.user_agent || request.headers.get('User-Agent');
+function tiktokPixelCode(env) {
+  return env.TIKTOK_PIXEL_CODE || TIKTOK_PIXEL_CODE;
+}
 
-  let ttclid = null;
-  if (data.url) {
-    try {
-      const urlObj = new URL(data.url);
-      ttclid = urlObj.searchParams.get('ttclid');
-    } catch(e) {}
-  }
+// Идентификаторы человека для TikTok. Телефон хешируется в формате E.164
+// С ПЛЮСОМ (+380XXXXXXXXX) — ровно так же хеширует пиксель в браузере,
+// иначе хеши браузера и сервера не совпадут.
+async function tiktokUser({ phoneE164, externalId, ttclid, ttp }) {
+  const user = {};
+  if (phoneE164 && /^\+\d{8,15}$/.test(phoneE164)) user.phone = await sha256(phoneE164);
+  if (externalId) user.external_id = await sha256(String(externalId));
+  // ttclid бывает до 1000 символов — обрезать его нельзя, иначе клик не сматчится
+  if (ttclid) user.ttclid = String(ttclid).slice(0, 2000);
+  if (ttp) user.ttp = String(ttp).slice(0, 200);
+  return user;
+}
 
-  const userData = {
-    phone_numbers: [phoneHash],
-    ip,
-    user_agent: userAgent,
-  };
-
-  if (externalIdHash) userData.external_id = externalIdHash;
-  if (ttclid) userData.ttclid = ttclid;
-
+async function postTikTokEvents(env, events) {
   const payload = {
-    pixel_code: env.TIKTOK_PIXEL_ID,
     event_source: 'web',
-    data: [{
-      event: 'SubmitForm',
-      event_time: data.timestamp || Math.floor(Date.now() / 1000),
-      event_id: data.event_id || `tiktok_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
-      user: userData,
-      page: {
-        url: data.url || '',
-        referrer: data.referrer || '',
-      },
-      properties: {
-        currency: 'USD',
-        value: 4.0,
-        content_name: 'Chat Manager Kyiv',
-        content_category: 'HR Lead',
-      },
-    }],
+    event_source_id: tiktokPixelCode(env),
+    data: events,
   };
+  if (env.TIKTOK_TEST_EVENT_CODE) payload.test_event_code = env.TIKTOK_TEST_EVENT_CODE;
 
-  const res = await fetch('https://business-api.tiktok.com/open_api/v1.3/event/track/', {
+  const res = await fetch(TIKTOK_API_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Access-Token': env.TIKTOK_ACCESS_TOKEN,
     },
     body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(10000),
   });
 
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`TikTok EAPI ${res.status}: ${text.slice(0, 200)}`);
+  const text = await res.text();
+  let body = null;
+  try { body = JSON.parse(text); } catch (e) {}
+
+  // TikTok отвечает HTTP 200 даже при ошибке — успех только при code === 0
+  if (!res.ok || !body || body.code !== 0) {
+    throw new Error(`TikTok EAPI http ${res.status} code ${body ? body.code : 'n/a'}: ${(body && body.message) || text.slice(0, 200)}`);
+  }
+  return body;
+}
+
+const TIKTOK_CONTENTS = [{
+  content_id: 'chat-manager-kyiv',
+  content_name: 'Chat Manager Kyiv',
+  content_category: 'HR Lead',
+}];
+
+// Заявка с сайта → событие Lead. event_id тот же, что у пикселя в браузере:
+// TikTok склеивает пару «браузер + сервер» в одно событие.
+async function sendToTikTok(env, data, request) {
+  let ttclid = data.ttclid || null;
+  if (!ttclid && data.url) {
+    try { ttclid = new URL(data.url).searchParams.get('ttclid'); } catch (e) {}
   }
 
-  const resData = await res.json();
+  const user = await tiktokUser({
+    phoneE164: data.phone_e164,
+    externalId: data.external_id,
+    ttclid,
+    ttp: data.ttp,
+  });
+  const ip = request.headers.get('CF-Connecting-IP');
+  const userAgent = data.user_agent || request.headers.get('User-Agent');
+  if (ip) user.ip = ip;
+  if (userAgent) user.user_agent = userAgent;
+
+  // Время события: часы браузера, если они не врут больше чем на 10 минут; иначе время сервера
+  const now = Math.floor(Date.now() / 1000);
+  const ts = Number(data.timestamp);
+  const eventTime = Number.isFinite(ts) && Math.abs(now - ts) <= 600 ? Math.floor(ts) : now;
+
+  const resData = await postTikTokEvents(env, [{
+    event: 'Lead',
+    event_time: eventTime,
+    event_id: data.event_id || `lead_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+    user,
+    page: {
+      url: data.url || data.landing_page || '',
+      referrer: data.referrer || '',
+    },
+    properties: {
+      currency: 'USD',
+      value: 4.0,
+      content_type: 'product',
+      contents: TIKTOK_CONTENTS,
+    },
+  }]);
   console.log('TikTok EAPI response:', JSON.stringify(resData));
   return resData;
+}
+
+// ========================================
+// СТАТУСЫ ЛИДОВ → TikTok Events API
+// HR ставит статус в таблице → сценарий Make шлёт POST /status/tiktok →
+// Worker отправляет событие качества в тот же пиксель.
+//
+// Имена — СТАНДАРТНЫЕ события TikTok для цели «Лиды»: по своим (custom)
+// событиям TikTok не оптимизирует, только показывает их в отчётах.
+//   Qualified → CompleteRegistration («качественный лид»)
+//   Converted → ApplicationApproval  («заявку одобрили: вышел на работу»)
+// null = статус известен, но событие не шлём (негативные статусы).
+// ========================================
+const TIKTOK_STATUS_EVENTS = {
+  qualified: { event: 'CompleteRegistration', value: 8 },
+  converted: { event: 'ApplicationApproval', value: 40 },
+  rejected: null,
+  contacted: null,
+};
+
+// Make может прислать своё имя события (поле event) — чтобы сменить
+// сопоставление без передеплоя воркера. Правила TikTok для имени:
+// латиница, цифры, «_» и «-», не длиннее 50 символов.
+const TIKTOK_EVENT_NAME_RE = /^[A-Za-z][A-Za-z0-9_-]{0,49}$/;
+
+async function statusKeyValid(request, env) {
+  const key = request.headers.get('X-Status-Key') || '';
+  if (!key) return false;
+  if (env.STATUS_KEY && key === env.STATUS_KEY) return true;
+  return (await sha256(key)) === STATUS_KEY_SHA256;
+}
+
+async function handleTikTokStatus(request, env, corsHeaders) {
+  if (request.method !== 'POST') {
+    return json({ error: 'Method not allowed' }, 405, corsHeaders);
+  }
+  if (!(await statusKeyValid(request, env))) {
+    return json({ error: 'Unauthorized' }, 401, corsHeaders);
+  }
+  if (!env.TIKTOK_ACCESS_TOKEN) {
+    return json({ error: 'TikTok token not configured' }, 503, corsHeaders);
+  }
+
+  // Тело — JSON или обычная форма (application/x-www-form-urlencoded).
+  // Make шлёт форму: значения из ячеек кодируются сами, и никакой символ
+  // в таблице (кавычка, перенос строки) не может сломать запрос.
+  let data;
+  try {
+    const contentType = (request.headers.get('Content-Type') || '').toLowerCase();
+    const raw = await request.text();
+    if (contentType.includes('application/x-www-form-urlencoded')) {
+      data = Object.create(null);
+      for (const [k, v] of new URLSearchParams(raw)) data[k] = v;
+    } else {
+      data = JSON.parse(raw);
+    }
+  } catch (e) {
+    return json({ error: 'Invalid JSON' }, 400, corsHeaders);
+  }
+  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+    return json({ error: 'Invalid JSON' }, 400, corsHeaders);
+  }
+
+  const status = String(data.status || '').toLowerCase().trim();
+  if (!Object.prototype.hasOwnProperty.call(TIKTOK_STATUS_EVENTS, status)) {
+    return json({ error: 'Unknown status: ' + (data.status || '(empty)') }, 400, corsHeaders);
+  }
+  const base = TIKTOK_STATUS_EVENTS[status];
+  if (!base) {
+    return json({ success: true, skipped: true, status }, 200, corsHeaders);
+  }
+  const mapped = { ...base };
+  if (data.event !== undefined && data.event !== null && data.event !== '') {
+    if (typeof data.event !== 'string' || !TIKTOK_EVENT_NAME_RE.test(data.event)) {
+      return json({ error: 'Invalid event name' }, 400, corsHeaders);
+    }
+    mapped.event = data.event;
+  }
+  if (data.value !== undefined && data.value !== null && data.value !== '') {
+    const v = Number(data.value);
+    if (!Number.isFinite(v) || v < 0 || v > 100000) {
+      return json({ error: 'Invalid value' }, 400, corsHeaders);
+    }
+    mapped.value = v;
+  }
+
+  const phoneDigits = String(data.phone || '').replace(/\D/g, '');
+  const phoneE164 = phoneDigits ? normalizePhone(phoneDigits) : null;
+  if (!phoneE164 && !data.external_id && !data.ttclid) {
+    return json({ error: 'Need phone / external_id / ttclid to match the lead' }, 400, corsHeaders);
+  }
+
+  const user = await tiktokUser({
+    phoneE164,
+    externalId: data.external_id,
+    ttclid: data.ttclid,
+    ttp: data.ttp,
+  });
+
+  // Детерминированный event_id → повторная отправка того же статуса не задвоится
+  const eventId = `${data.event_id || data.external_id || phoneDigits}-${status}`;
+
+  try {
+    const tt = await postTikTokEvents(env, [{
+      event: mapped.event,
+      event_time: Math.floor(Date.now() / 1000),
+      event_id: eventId,
+      user,
+      page: { url: data.landing_page || 'https://chatman-kyiv.com/' },
+      properties: {
+        currency: 'USD',
+        value: mapped.value,
+        content_type: 'product',
+        contents: TIKTOK_CONTENTS,
+      },
+    }]);
+    console.log('Status → TikTok:', status, mapped.event, eventId, JSON.stringify(tt));
+    return json({ success: true, status, event: mapped.event, event_id: eventId, tiktok_code: tt.code }, 200, corsHeaders);
+  } catch (e) {
+    console.log('Status → TikTok failed:', status, eventId, e && e.message);
+    return json({ error: 'TikTok EAPI error', details: String((e && e.message) || e).slice(0, 300) }, 502, corsHeaders);
+  }
 }
 
 async function sha256(text) {
