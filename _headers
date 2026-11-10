@@ -1,5 +1,5 @@
 # Cloudflare Pages — HTTP Headers
-# Обновлено: 2026-11-10 (TikTok: analytics-ipv6.tiktokw.us в connect-src — пиксель шлёт туда IPv6-обогащение)
+# Обновлено: 2026-11-10 (connect-src: analytics-ipv6.tiktokw.us для пикселя TikTok; analytics.google.com — часть хитов GA4 уходит на сам домен, маска *.analytics.google.com его не покрывает)
 
 /*
   X-Content-Type-Options: nosniff
@@ -9,7 +9,7 @@
   Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
   # Боевой CSP. Если понадобится снова диагностировать — временно переименуй
   # заголовок в Content-Security-Policy-Report-Only (значение оставь тем же).
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.googleadservices.com https://*.doubleclick.net https://www.google.com https://connect.facebook.net https://analytics.tiktok.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://www.googletagmanager.com https://*.google-analytics.com https://www.googleadservices.com https://*.doubleclick.net https://www.google.com https://www.google.com.ua https://www.facebook.com https://analytics.tiktok.com; connect-src 'self' https://*.workers.dev https://hook.eu2.make.com https://www.googletagmanager.com https://*.google-analytics.com https://*.analytics.google.com https://www.googleadservices.com https://*.doubleclick.net https://www.google.com https://connect.facebook.net https://www.facebook.com https://analytics.tiktok.com https://*.tiktok.com https://analytics-ipv6.tiktokw.us https://cloudflareinsights.com; frame-src 'self' https://*.doubleclick.net https://www.googletagmanager.com https://www.google.com https://www.googleadservices.com https://www.facebook.com;
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.googleadservices.com https://*.doubleclick.net https://www.google.com https://connect.facebook.net https://analytics.tiktok.com https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://www.googletagmanager.com https://*.google-analytics.com https://www.googleadservices.com https://*.doubleclick.net https://www.google.com https://www.google.com.ua https://www.facebook.com https://analytics.tiktok.com; connect-src 'self' https://*.workers.dev https://hook.eu2.make.com https://www.googletagmanager.com https://*.google-analytics.com https://*.analytics.google.com https://analytics.google.com https://www.googleadservices.com https://*.doubleclick.net https://www.google.com https://connect.facebook.net https://www.facebook.com https://analytics.tiktok.com https://*.tiktok.com https://analytics-ipv6.tiktokw.us https://cloudflareinsights.com; frame-src 'self' https://*.doubleclick.net https://www.googletagmanager.com https://www.google.com https://www.googleadservices.com https://www.facebook.com;
 
 /*.html
   Cache-Control: public, max-age=300, must-revalidate
