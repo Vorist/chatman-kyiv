@@ -37,9 +37,12 @@ const WORKER_VERSION = '2026-11-10-tiktok';
 const TIKTOK_PIXEL_CODE = 'DBP6LBRC77U5934IJN90';
 const TIKTOK_API_URL = 'https://business-api.tiktok.com/open_api/v1.3/event/track/';
 
-// SHA-256 ключа, которым Make подписывает запросы на /status/tiktok.
-// Сам ключ хранится только в сценарии Make; здесь лежит лишь его хеш.
-const STATUS_KEY_SHA256 = '0bf00d1825c295f2a459c82e92a3e86793a534dadf0f8ca4ba3f41bffd7542e9';
+// Ключ, которым сценарий Make подписывает запросы на /status/tiktok
+// (заголовок X-Status-Key). Здесь лежит только его SHA-256: сам ключ хранится
+// в сценарии Make и составлен из ID таблицы лидов, поэтому посторонний,
+// не видевший таблицу, запрос подделать не сможет. Нужна защита строже —
+// задай свой секрет: wrangler secret put STATUS_KEY (и тот же ключ в Make).
+const STATUS_KEY_SHA256 = '4cc91108fb80a5df54335b85fb43886bf7a4e711631cb60f13a24b98f7f71b47';
 
 export default {
   async fetch(request, env, ctx) {
