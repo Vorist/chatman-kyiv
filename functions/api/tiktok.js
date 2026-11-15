@@ -46,6 +46,10 @@ export async function onRequest(context) {
     return json({ error: 'Unauthorized' }, 401);
   }
 
+  // Слишком большое тело отсекаем ещё до чтения, по заголовку (в UTF-8 символ занимает до 4 байт)
+  const declaredBytes = Number(request.headers.get('Content-Length') || 0);
+  if (declaredBytes > MAX_BODY_CHARS * 4) return json({ error: 'Body too large' }, 413);
+
   // Тело — обычная форма (так шлёт Make: значения из ячеек кодируются сами
   // и никакой символ не может сломать запрос) или JSON.
   let data;
@@ -207,7 +211,7 @@ function str(v) {
 function json(body, status) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex' },
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex', 'X-Content-Type-Options': 'nosniff' },
   });
 }
 

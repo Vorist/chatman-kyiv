@@ -104,7 +104,8 @@ npx wrangler login
 # URL твоего Make.com webhook (копируй из Make сценария)
 npx wrangler secret put MAKE_WEBHOOK_URL
 
-# ID пикселя (для CHATI2v1 это 1237613791688649)
+# ID пикселя: тот же, что в fbq('init', ...) на странице (для CHATI2v1 это 2160949541347107).
+# Если ID здесь и на странице разойдутся, серверные и браузерные события перестанут склеиваться.
 npx wrangler secret put FB_PIXEL_ID
 
 # Access Token для CAPI: Events Manager → Settings → Generate Access Token

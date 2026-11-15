@@ -1542,7 +1542,7 @@
             <h2>Откликнуться на вакансию</h2>
             <p class="form-sub">Заполнение&nbsp;— 1&nbsp;минута. Перезвоним в&nbsp;течение&nbsp;30&nbsp;минут и&nbsp;ответим на&nbsp;все вопросы, без обязательств.</p>
 
-            <form id="leadForm" novalidate>
+            <form id="leadForm" method="post" novalidate>
               <input type="hidden" name="lang" value="ru">
               <!-- Атрибуция лида (заполняется скриптом при загрузке) -->
               <input type="hidden" name="gclid" id="f_gclid">
@@ -1973,7 +1973,8 @@
     // ============================================
     function getOrCreateExternalId() {
       const key = '_eid';
-      let eid = localStorage.getItem(key);
+      let eid = null;
+      try { eid = localStorage.getItem(key); } catch (e) {} // хранилище может быть выключено в браузере — форма должна работать и без него
       if (!eid) {
         eid = 'u_' + Date.now() + '_' + Math.random().toString(36).slice(2, 11);
         try { localStorage.setItem(key, eid); } catch(e) {}
@@ -2003,6 +2004,7 @@
       const KEY = 'lead_attribution';
       let a = {};
       try { a = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) {}
+      if (!a || typeof a !== 'object' || Array.isArray(a)) a = {};
       const p = new URLSearchParams(window.location.search);
       ['gclid','gbraid','wbraid','fbclid','ttclid','utm_source','utm_medium','utm_campaign','utm_term','utm_content']
         .forEach(function (k) { const v = p.get(k); if (v && !a[k]) a[k] = v; }); // first-touch: не перезаписываем
