@@ -1,20 +1,49 @@
 /**
  * Cloudflare Worker — обработчик формы лендинга
  *
+ * Защита роута заявки (POST /):
+ *   - Origin. Заявка принимается только со своих адресов: chatman-kyiv.com,
+ *     www.chatman-kyiv.com, адреса из ALLOWED_ORIGIN (можно несколько через
+ *     запятую) и предпросмотры Pages (chatman-kyiv.pages.dev и
+ *     <ветка>.chatman-kyiv.pages.dev). Нет заголовка Origin или он чужой → 403.
+ *     В CORS-заголовке возвращается Origin самого запроса (плюс Vary: Origin),
+ *     «*» не отдаётся никогда. Копия страницы на чужом домене заявку не отправит.
+ *   - Лимит. Не больше 8 попыток с одного IP за 10 минут, дальше → 429.
+ *     Счётчик лежит в том же KV. Нет IP или KV недоступен — лимит не применяется.
+ *     На /status и /status/tiktok лимит не действует.
+ *   - Тело. Читается как текст, больше 16 КБ → 413, принимается только JSON-объект.
+ *   - Белый список. В Make уходят только известные поля формы и поля, которые
+ *     добавляет сам воркер. Всё остальное отбрасывается.
+ *   - Очистка значений (то, что пропускает проверка на странице, не отклоняется):
+ *       name      — буквы, пробел, дефис, апостроф, точка; остальное вырезается
+ *       telegram  — необязательная @ в начале и [A-Za-z0-9_]
+ *       phone     — цифры и знаки номера; после нормализации обязан быть +XXXXXXXXX
+ *       readiness — только 2_days / week / month
+ *       остальные строки — без управляющих символов, с ограничением длины;
+ *       если значение начинается с = + - @, перед ним ставится апостроф, чтобы
+ *       Google Sheets не выполнил его как формулу. Рекламные идентификаторы
+ *       (fbp, fbc, ttp, ttclid, gclid, gbraid, wbraid, fbclid, event_id,
+ *       external_id) из одних [A-Za-z0-9._-] не трогаются совсем.
+ *
  * Дедупликация:
  *   - Проверяет телефон и телеграм в KV хранилище
  *   - Нормализует телеграм: @ убирается, всё в lowercase
+ *   - Ключи записываются ТОЛЬКО после того, как Make принял заявку. Если Make
+ *     упал и человек нажал «отправить» ещё раз, заявка дойдёт, а не будет
+ *     принята за дубликат.
+ *   - Ошибка KV (чтение или запись) пишется в лог и заявку не останавливает
  *   - TTL записей: 90 дней
  *
  * Отправляет в 3 системы:
- *   1. Make.com webhook → Google Sheets + Telegram
- *   2. Meta CAPI
+ *   1. Make.com webhook → Google Sheets + Telegram (ждём ответа, от него зависит ответ форме)
+ *   2. Meta CAPI — только после успеха Make, в фоне; её ошибка на ответ форме не влияет
  *   3. TikTok Events API (в фоне — ответ форме его не ждёт)
  *
  * Роуты:
  *   POST /               — заявка с лендинга
  *   POST /status         — статус лида → Meta CAPI (нужен STATUS_KEY)
  *   POST /status/tiktok  — статус лида → TikTok Events API (вызывает Make)
+ *   Ключи статусов сравниваются за постоянное время.
  *
  * Секреты (wrangler secret put):
  *   MAKE_WEBHOOK_URL, FB_PIXEL_ID, FB_ACCESS_TOKEN, ALLOWED_ORIGIN
@@ -25,13 +54,47 @@
  *   STATUS_KEY              — свой ключ для /status и /status/tiktok
  *
  * KV namespace:
- *   LEADS_DEDUP — хранит хеши телефонов и телеграм-ников
+ *   LEADS_DEDUP — хеши телефонов и телеграм-ников (phone:…, tg:…) и счётчики
+ *                 попыток по IP (rl:…, живут 20 минут)
  */
 
 const KV_TTL_SECONDS = 90 * 24 * 60 * 60; // 90 дней
 
 // Версия кода — видна в заголовке X-Worker-Version любого ответа (проверка деплоя)
-const WORKER_VERSION = '2026-11-10-tiktok';
+const WORKER_VERSION = '2026-11-15-hardening';
+
+// ---- Защита роута заявки ----
+
+// Свои адреса сайта. Дополнительные задаются секретом ALLOWED_ORIGIN (через запятую).
+const SITE_ORIGINS = ['https://chatman-kyiv.com', 'https://www.chatman-kyiv.com'];
+// Предпросмотры Cloudflare Pages этого проекта: сам проект и одна метка ветки/деплоя
+const PAGES_PREVIEW_RE = /^https:\/\/(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)?chatman-kyiv\.pages\.dev$/;
+
+const MAX_BODY_BYTES = 16 * 1024;      // тело заявки со всеми метками занимает 1–5 КБ
+const RATE_MAX_ATTEMPTS = 8;           // попыток с одного IP…
+const RATE_WINDOW_SECONDS = 10 * 60;   // …за 10 минут
+
+const READINESS_VALUES = ['2_days', 'week', 'month'];
+
+// Обычные строковые поля заявки (кроме name / age / phone / telegram / readiness /
+// lang / source / timestamp — у них свои правила)
+const TEXT_FIELDS = [
+  'landing_page', 'first_visit', 'event_id', 'external_id', 'url', 'referrer',
+  'fbp', 'fbc', 'ttp', 'ttclid', 'user_agent',
+  'gclid', 'gbraid', 'wbraid', 'fbclid',
+  'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content',
+];
+// Рекламные идентификаторы: по ним площадки находят клик, менять их нельзя
+const AD_ID_FIELDS = ['fbp', 'fbc', 'ttp', 'ttclid', 'gclid', 'gbraid', 'wbraid', 'fbclid', 'event_id', 'external_id'];
+const AD_ID_SAFE_RE = /^[A-Za-z0-9._-]+$/;
+// Ограничения длины; для остальных полей — TEXT_MAX_DEFAULT
+const TEXT_MAX = { ttclid: 2000, url: 1000, referrer: 1000, landing_page: 1000, user_agent: 500 };
+const TEXT_MAX_DEFAULT = 300;
+
+// Управляющие и невидимые символы (в том числе табуляция и переводы строк)
+const CONTROL_CHARS_RE = /[\p{Cc}\p{Cf}\u2028\u2029]/gu;
+// С этих символов таблица начинает читать ячейку как формулу (обычные и полноширинные)
+const FORMULA_LEAD_RE = /^[=+\-@\uFF1D\uFF0B\uFF0D\uFF20]/;
 
 // TikTok: код пикселя публичный (он же стоит в коде страницы), секрет — только токен
 const TIKTOK_PIXEL_CODE = 'DBP6LBRC77U5934IJN90';
@@ -46,16 +109,23 @@ const STATUS_KEY_SHA256 = '4cc91108fb80a5df54335b85fb43886bf7a4e711631cb60f13a24
 
 export default {
   async fetch(request, env, ctx) {
+    const origin = request.headers.get('Origin') || '';
+    const originAllowed = isAllowedOrigin(origin, env);
+
+    // CORS: возвращаем Origin самого запроса и только если он в списке своих. «*» не бывает.
     const corsHeaders = {
-      'Access-Control-Allow-Origin': env.ALLOWED_ORIGIN || '*',
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
       'Access-Control-Max-Age': '86400',
+      'Vary': 'Origin',
+      'Cache-Control': 'no-store',
+      'X-Content-Type-Options': 'nosniff',
       'X-Worker-Version': WORKER_VERSION,
     };
+    if (originAllowed) corsHeaders['Access-Control-Allow-Origin'] = origin;
 
     if (request.method === 'OPTIONS') {
-      return new Response(null, { headers: corsHeaders });
+      return new Response(null, { status: originAllowed ? 200 : 403, headers: corsHeaders });
     }
 
     const pathname = new URL(request.url).pathname;
@@ -74,96 +144,112 @@ export default {
       return json({ error: 'Method not allowed' }, 405, corsHeaders);
     }
 
+    // ============================================
+    // ЗАЩИТА: Origin → лимит по IP → размер и формат тела
+    // ============================================
+    if (!originAllowed) {
+      console.log('Lead rejected: origin', cleanText(origin, 120, false) || '(none)');
+      return json({ error: 'Origin not allowed' }, 403, corsHeaders);
+    }
+
+    if (await isRateLimited(env, request.headers.get('CF-Connecting-IP'))) {
+      console.log('Lead rejected: rate limit');
+      return json({ error: 'Too many requests' }, 429, { ...corsHeaders, 'Retry-After': String(RATE_WINDOW_SECONDS) });
+    }
+
+    const raw = await readBodyLimited(request, MAX_BODY_BYTES);
+    if (raw === null) {
+      return json({ error: 'Payload too large' }, 413, corsHeaders);
+    }
+
     let data;
     try {
-      data = await request.json();
+      data = JSON.parse(raw);
     } catch (e) {
       return json({ error: 'Invalid JSON' }, 400, corsHeaders);
     }
+    if (!data || typeof data !== 'object' || Array.isArray(data)) {
+      return json({ error: 'Invalid JSON' }, 400, corsHeaders);
+    }
 
-    const { name, age, phone, telegram, readiness } = data;
-    if (!name || !phone || !telegram || !readiness) {
+    // Берём только собственные поля объекта (никаких __proto__ и т.п.)
+    const field = (key) => (Object.prototype.hasOwnProperty.call(data, key) ? data[key] : undefined);
+
+    if (isBlank(field('name')) || isBlank(field('phone')) || isBlank(field('telegram')) || isBlank(field('readiness'))) {
       return json({ error: 'Missing required fields' }, 400, corsHeaders);
     }
 
-    if (name.length > 100 || age < 16 || age > 99) {
+    // ============================================
+    // ОЧИСТКА ПОЛЕЙ
+    // Всё, что пропускает проверка на странице, проходит без изменений.
+    // ============================================
+    const name = cleanName(field('name'));
+    const age = cleanAge(field('age'));
+    const phone = cleanPhone(field('phone'));
+    const telegram = cleanTelegram(field('telegram'));
+    const readiness = typeof field('readiness') === 'string' ? field('readiness').trim() : '';
+
+    const phoneE164 = phone ? normalizePhone(phone) : '';
+
+    if (!name || age === null || !telegram || !/^\+\d{9,15}$/.test(phoneE164) || !READINESS_VALUES.includes(readiness)) {
       return json({ error: 'Validation failed' }, 400, corsHeaders);
     }
 
-    const phoneE164 = normalizePhone(phone);
-
     // Нормализация телеграма: убираем @ и приводим к lowercase
     // @Sinba08 и Sinba08 — одно и то же
-    const tgNormalized = telegram.trim().replace(/^@/, '').toLowerCase();
+    const tgNormalized = telegram.replace(/^@/, '').toLowerCase();
 
     // ============================================
-    // ДЕДУПЛИКАЦИЯ ЧЕРЕЗ KV
+    // ДЕДУПЛИКАЦИЯ ЧЕРЕЗ KV — пока только проверка.
+    // Ключи записываются ниже, после того как Make принял заявку.
+    // Ошибка KV заявку не останавливает.
     // ============================================
+    let phoneKey = null;
+    let tgKey = null;
     if (env.LEADS_DEDUP) {
-      const phoneKey = `phone:${await sha256(phoneE164)}`;
-      const tgKey = `tg:${await sha256(tgNormalized)}`;
+      phoneKey = `phone:${await sha256(phoneE164)}`;
+      tgKey = `tg:${await sha256(tgNormalized)}`;
 
       const [existingPhone, existingTg] = await Promise.all([
-        env.LEADS_DEDUP.get(phoneKey),
-        env.LEADS_DEDUP.get(tgKey),
+        kvGet(env, phoneKey),
+        kvGet(env, tgKey),
       ]);
 
-      if (existingPhone) {
-        console.log('Duplicate: phone', phoneE164);
+      if (existingPhone || existingTg) {
+        console.log('Duplicate:', existingPhone ? 'phone' : 'telegram');
         return json({
           duplicate: true,
           message: 'Вы уже оставили заявку. Мы скоро свяжемся с вами!'
         }, 200, corsHeaders);
       }
-
-      if (existingTg) {
-        console.log('Duplicate: telegram', tgNormalized);
-        return json({
-          duplicate: true,
-          message: 'Вы уже оставили заявку. Мы скоро свяжемся с вами!'
-        }, 200, corsHeaders);
-      }
-
-      // Записываем в KV с TTL 90 дней
-      // Сохраняем читаемые данные для возможной отладки
-      const submittedAt = new Date().toISOString();
-      await Promise.all([
-        env.LEADS_DEDUP.put(phoneKey, submittedAt, { expirationTtl: KV_TTL_SECONDS }),
-        env.LEADS_DEDUP.put(tgKey, submittedAt, { expirationTtl: KV_TTL_SECONDS }),
-      ]);
-
-      console.log('KV: saved phone + tg for', tgNormalized);
     }
 
     // ============================================
     // ОБРАБОТКА ЛИДА
+    // В Make уходит только этот объект: известные поля формы + то, что добавил воркер.
+    // Ключи всегда присутствуют (пустые, если значения не было),
+    // чтобы колонки в Google Sheets не съезжали от лида к лиду.
     // ============================================
     const enriched = {
-      ...data,
-      // Атрибуция — просто проброс. Ключи всегда присутствуют (пустые, если метки не было),
-      // чтобы колонки в Google Sheets не съезжали от лида к лиду.
-      gclid: data.gclid || '',
-      gbraid: data.gbraid || '',
-      wbraid: data.wbraid || '',
-      fbclid: data.fbclid || '',
-      ttclid: data.ttclid || '',
-      utm_source: data.utm_source || '',
-      utm_medium: data.utm_medium || '',
-      utm_campaign: data.utm_campaign || '',
-      utm_term: data.utm_term || '',
-      utm_content: data.utm_content || '',
-      referrer: data.referrer || '',
-      landing_page: data.landing_page || '',
-      fbc: data.fbc || '',
-      fbp: data.fbp || '',
-      phone_e164: phoneE164,
-      telegram_normalized: tgNormalized,
-      channel: detectChannel(data),
-      received_at: new Date().toISOString(),
-      ip: request.headers.get('CF-Connecting-IP'),
-      country: request.headers.get('CF-IPCountry'),
-      user_agent_server: request.headers.get('User-Agent'),
+      name,
+      age,
+      phone,
+      telegram,
+      readiness,
+      lang: cleanLang(field('lang')),
+      source: cleanSource(field('source')),
+      timestamp: cleanTimestamp(field('timestamp')),
     };
+    for (const key of TEXT_FIELDS) {
+      enriched[key] = cleanText(field(key), TEXT_MAX[key] || TEXT_MAX_DEFAULT, AD_ID_FIELDS.includes(key));
+    }
+    enriched.phone_e164 = phoneE164;
+    enriched.telegram_normalized = tgNormalized;
+    enriched.channel = detectChannel(enriched);
+    enriched.received_at = new Date().toISOString();
+    enriched.ip = String(request.headers.get('CF-Connecting-IP') || '').replace(/[^0-9A-Fa-f:.]/g, '').slice(0, 45);
+    enriched.country = String(request.headers.get('CF-IPCountry') || '').replace(/[^A-Za-z0-9]/g, '').slice(0, 2).toUpperCase();
+    enriched.user_agent_server = cleanText(request.headers.get('User-Agent'), 500, false);
 
     // TikTok Events API — в фоне: ответ форме не ждёт TikTok, и никакая
     // ошибка TikTok не может повлиять на сохранение лида.
@@ -174,20 +260,34 @@ export default {
       if (ctx && typeof ctx.waitUntil === 'function') ctx.waitUntil(tiktokJob);
     }
 
-    const [makeRes, capiRes] = await Promise.allSettled([
-      env.MAKE_WEBHOOK_URL
-        ? sendToMake(env.MAKE_WEBHOOK_URL, enriched)
-        : Promise.resolve(null),
-      env.FB_PIXEL_ID && env.FB_ACCESS_TOKEN
-        ? sendToCAPI(env, enriched, request)
-        : Promise.resolve(null),
-    ]);
-
-    console.log('Make:', makeRes.status, makeRes.reason?.message || 'ok');
-    console.log('Meta CAPI:', capiRes.status, capiRes.reason?.message || 'ok');
-
-    if (makeRes.status === 'rejected') {
+    // Make — главный получатель: от него зависит, что увидит человек.
+    try {
+      if (!env.MAKE_WEBHOOK_URL) throw new Error('MAKE_WEBHOOK_URL is not set');
+      await sendToMake(env.MAKE_WEBHOOK_URL, enriched);
+      console.log('Make: ok');
+    } catch (e) {
+      // Ключи дедупликации не записаны → повторная отправка дойдёт до Make
+      console.log('Make: failed', e && e.message);
       return json({ error: 'Failed to save lead' }, 500, corsHeaders);
+    }
+
+    // Заявка сохранена — только теперь запоминаем телефон и телеграм на 90 дней
+    if (env.LEADS_DEDUP && phoneKey && tgKey) {
+      const submittedAt = new Date().toISOString();
+      await Promise.all([
+        kvPut(env, phoneKey, submittedAt, KV_TTL_SECONDS),
+        kvPut(env, tgKey, submittedAt, KV_TTL_SECONDS),
+      ]);
+    }
+
+    // Meta CAPI — после успеха Make и в фоне: ответ форме её не ждёт,
+    // ошибка Meta на ответ не влияет.
+    if (env.FB_PIXEL_ID && env.FB_ACCESS_TOKEN) {
+      const capiJob = sendToCAPI(env, enriched, request)
+        .then(() => console.log('Meta CAPI: ok'))
+        .catch((e) => console.log('Meta CAPI: failed', e && e.message));
+      if (ctx && typeof ctx.waitUntil === 'function') ctx.waitUntil(capiJob);
+      else await capiJob;
     }
 
     return json({ success: true }, 200, corsHeaders);
@@ -203,6 +303,174 @@ function json(data, status, headers = {}) {
     status,
     headers: { 'Content-Type': 'application/json', ...headers },
   });
+}
+
+// ========================================
+// ЗАЩИТА РОУТА ЗАЯВКИ
+// ========================================
+
+// Свой ли это адрес: основной сайт, www, список из ALLOWED_ORIGIN, предпросмотр Pages
+function isAllowedOrigin(origin, env) {
+  if (!origin || origin === 'null' || origin.length > 200) return false;
+  const o = origin.toLowerCase();
+  if (SITE_ORIGINS.includes(o) || PAGES_PREVIEW_RE.test(o)) return true;
+  for (const part of String(env.ALLOWED_ORIGIN || '').split(',')) {
+    const allowed = part.trim().replace(/\/+$/, '').toLowerCase();
+    // «*» и «null» в списке игнорируются: открыть приём заявок для всех нельзя
+    if (allowed && allowed !== '*' && allowed !== 'null' && allowed === o) return true;
+  }
+  return false;
+}
+
+// Читает тело как текст, но не больше maxBytes. null → тело слишком большое.
+async function readBodyLimited(request, maxBytes) {
+  const declared = Number(request.headers.get('Content-Length'));
+  if (Number.isFinite(declared) && declared > maxBytes) return null;
+  if (!request.body) return '';
+  try {
+    const reader = request.body.getReader();
+    const chunks = [];
+    let total = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > maxBytes) {
+        try { await reader.cancel(); } catch (e) {}
+        return null;
+      }
+      chunks.push(value);
+    }
+    const buf = new Uint8Array(total);
+    let offset = 0;
+    for (const chunk of chunks) { buf.set(chunk, offset); offset += chunk.byteLength; }
+    return new TextDecoder().decode(buf);
+  } catch (e) {
+    return ''; // соединение оборвалось — дальше это станет «Invalid JSON»
+  }
+}
+
+// Лимит попыток с одного IP. Ключ rl:<хеш IP>:<номер 10-минутного окна>, живёт 20 минут.
+// Нет IP или KV недоступен → не ограничиваем: лучше пропустить лишнее, чем потерять лида.
+async function isRateLimited(env, ip) {
+  if (!env.LEADS_DEDUP || !ip) return false;
+  try {
+    const bucket = Math.floor(Date.now() / (RATE_WINDOW_SECONDS * 1000));
+    const key = `rl:${(await sha256(ip)).slice(0, 32)}:${bucket}`;
+    const count = parseInt(await env.LEADS_DEDUP.get(key), 10) || 0;
+    if (count >= RATE_MAX_ATTEMPTS) return true;
+    await env.LEADS_DEDUP.put(key, String(count + 1), { expirationTtl: RATE_WINDOW_SECONDS * 2 });
+    return false;
+  } catch (e) {
+    console.log('KV rate limit failed:', e && e.message);
+    return false;
+  }
+}
+
+// KV без исключений: ошибка чтения = «не нашли», ошибка записи = только строка в логе
+async function kvGet(env, key) {
+  try {
+    return await env.LEADS_DEDUP.get(key);
+  } catch (e) {
+    console.log('KV read failed:', e && e.message);
+    return null;
+  }
+}
+
+async function kvPut(env, key, value, ttlSeconds) {
+  try {
+    await env.LEADS_DEDUP.put(key, value, { expirationTtl: ttlSeconds });
+    return true;
+  } catch (e) {
+    console.log('KV write failed:', e && e.message);
+    return false;
+  }
+}
+
+// ========================================
+// ОЧИСТКА ПОЛЕЙ ЗАЯВКИ
+// ========================================
+
+function isBlank(value) {
+  return value === null || value === undefined || (typeof value === 'string' && value.trim() === '');
+}
+
+// Имя: буквы любого алфавита, пробел, дефис, апострофы (' ’ ‘ ʼ) и точка.
+// Всё остальное (= * _ [ ] ` скобки, цифры, кавычки…) вырезается, поэтому имя
+// не может стать формулой в таблице или разметкой в сообщении Telegram.
+function cleanName(value) {
+  if (typeof value !== 'string') return '';
+  let s = value.slice(0, 1000).normalize('NFC');
+  s = s.replace(/[\u2010-\u2015\u2212]/g, '-');        // типографские тире → дефис
+  s = s.replace(/[^\p{L}\s\-'\u2019\u2018\u02BC.]/gu, '');
+  s = s.replace(/\s+/g, ' ');
+  s = s.replace(/^[^\p{L}]+/u, '');                    // имя начинается с буквы
+  return s.slice(0, 100).trim();
+}
+
+// Возраст: целое 16–99. Пусто → '' (как раньше, поле необязательное). null → отклонить.
+function cleanAge(value) {
+  if (value === null || value === undefined || value === '') return '';
+  if (typeof value !== 'number' && typeof value !== 'string') return null;
+  const s = String(value).trim();
+  if (!/^\d{1,3}$/.test(s)) return null;
+  const n = parseInt(s, 10);
+  return n >= 16 && n <= 99 ? n : null;
+}
+
+// Телефон: остаются только цифры и знаки, которыми пишут номер: + ( ) - пробел
+function cleanPhone(value) {
+  if (typeof value !== 'string' && typeof value !== 'number') return '';
+  return String(value).slice(0, 40).replace(/[^\d+\-() ]/g, '').replace(/^[\s\-]+/, '').trim();
+}
+
+// Телеграм: необязательная одна @ в начале и [A-Za-z0-9_], не длиннее 64 символов
+function cleanTelegram(value) {
+  if (typeof value !== 'string') return '';
+  const s = value.trim().slice(0, 300);
+  const at = s.startsWith('@') ? '@' : '';
+  const nick = s.replace(/[^A-Za-z0-9_]/g, '').slice(0, 64 - at.length);
+  return nick ? at + nick : '';
+}
+
+function cleanLang(value) {
+  return typeof value === 'string' && value.trim().toLowerCase() === 'ru' ? 'ru' : 'uk';
+}
+
+function cleanSource(value) {
+  if (typeof value !== 'string') return 'landing';
+  return value.toLowerCase().replace(/[^a-z0-9_-]/g, '').replace(/^-+/, '').slice(0, 50) || 'landing';
+}
+
+// Время отправки из браузера (секунды). Остаётся числом — оно нужно Meta и TikTok.
+function cleanTimestamp(value) {
+  const n = typeof value === 'number' ? value : (typeof value === 'string' && /^\d{1,12}$/.test(value.trim()) ? Number(value) : NaN);
+  return Number.isFinite(n) && n > 0 && n < 1e11 ? Math.floor(n) : '';
+}
+
+// Обычная строка: без управляющих символов, с ограничением длины и защитой от формул.
+// isAdId = true → значение из одних [A-Za-z0-9._-] возвращается как есть.
+function cleanText(value, max, isAdId) {
+  if (value === null || value === undefined) return '';
+  const type = typeof value;
+  if (type !== 'string' && type !== 'number' && type !== 'boolean') return '';
+  let s = String(value);
+  if (typeof s.toWellFormed === 'function') s = s.toWellFormed(); // битые суррогатные пары
+  s = s.replace(CONTROL_CHARS_RE, '').trim().slice(0, max);
+  if (/[\uD800-\uDBFF]$/.test(s)) s = s.slice(0, -1);              // обрезали посреди пары
+  if (!s) return '';
+  if (isAdId && AD_ID_SAFE_RE.test(s)) return s;
+  // Апостроф в начале: таблица покажет значение текстом и не станет считать формулу
+  return FORMULA_LEAD_RE.test(s) ? "'" + s : s;
+}
+
+// Сравнение строк за постоянное время: сравниваются SHA-256 обеих строк,
+// поэтому ни длина, ни место первого расхождения по времени ответа не видны.
+async function safeEqual(a, b) {
+  const [ha, hb] = await Promise.all([sha256(String(a)), sha256(String(b))]);
+  let diff = 0;
+  for (let i = 0; i < ha.length; i++) diff |= ha.charCodeAt(i) ^ hb.charCodeAt(i);
+  return diff === 0;
 }
 
 // ========================================
@@ -242,8 +510,10 @@ async function handleStatusUpdate(request, env, corsHeaders) {
   if (request.method !== 'POST') {
     return json({ error: 'Method not allowed' }, 405, corsHeaders);
   }
-  // Защита: секрет в заголовке (задать: wrangler secret put STATUS_KEY)
-  if (!env.STATUS_KEY || request.headers.get('X-Status-Key') !== env.STATUS_KEY) {
+  // Защита: секрет в заголовке (задать: wrangler secret put STATUS_KEY).
+  // Сравнение за постоянное время — по времени ответа ключ не подобрать.
+  const statusKey = request.headers.get('X-Status-Key') || '';
+  if (!env.STATUS_KEY || !statusKey || !(await safeEqual(statusKey, env.STATUS_KEY))) {
     return json({ error: 'Unauthorized' }, 401, corsHeaders);
   }
   if (!env.FB_PIXEL_ID || !env.FB_ACCESS_TOKEN) {
@@ -375,7 +645,7 @@ async function sendToCAPI(env, data, request) {
     try {
       const urlObj = new URL(data.url);
       const fbclid = urlObj.searchParams.get('fbclid');
-      if (fbclid) userData.fbc = `fb.1.${data.timestamp * 1000}.${fbclid}`;
+      if (fbclid) userData.fbc = `fb.1.${(data.timestamp || Math.floor(Date.now() / 1000)) * 1000}.${fbclid}`;
     } catch(e) {}
   }
 
@@ -383,7 +653,7 @@ async function sendToCAPI(env, data, request) {
     data: [{
       event_name: 'Lead',
       event_time: data.timestamp || Math.floor(Date.now() / 1000),
-      event_source_url: data.url,
+      event_source_url: data.url || undefined,
       action_source: 'website',
       event_id: data.event_id || `lead_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
       user_data: userData,
@@ -402,6 +672,7 @@ async function sendToCAPI(env, data, request) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(10000), // фоновая задача не висит дольше 10 секунд
   });
 
   if (!res.ok) {
@@ -540,8 +811,10 @@ const TIKTOK_EVENT_NAME_RE = /^[A-Za-z][A-Za-z0-9_-]{0,49}$/;
 async function statusKeyValid(request, env) {
   const key = request.headers.get('X-Status-Key') || '';
   if (!key) return false;
-  if (env.STATUS_KEY && key === env.STATUS_KEY) return true;
-  return (await sha256(key)) === STATUS_KEY_SHA256;
+  // Обе проверки выполняются всегда и за постоянное время
+  const matchesOwn = env.STATUS_KEY ? await safeEqual(key, env.STATUS_KEY) : false;
+  const matchesBuiltIn = await safeEqual(await sha256(key), STATUS_KEY_SHA256);
+  return matchesOwn || matchesBuiltIn;
 }
 
 async function handleTikTokStatus(request, env, corsHeaders) {
