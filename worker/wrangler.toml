@@ -2,6 +2,11 @@ name = "chatmanager-lead-worker"
 main = "src/index.js"
 compatibility_date = "2025-01-01"
 
+# Переменные, заданные в панели Cloudflare, при выкладке не удаляются.
+# Без этой строки wrangler deploy стёр бы всё, чего нет в этом файле,
+# и воркер остался бы без адреса Make: заявки перестали бы сохраняться.
+keep_vars = true
+
 [observability]
 enabled = true
 

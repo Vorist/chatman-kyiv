@@ -3,21 +3,24 @@
 // 1. Служебные файлы репозитория (исходник воркера, README, настройки) посетителям
 //    не отдаются: в ответ 404. Pages публикует весь репозиторий как сайт, поэтому
 //    без этой проверки их мог скачать кто угодно.
-// 2. www.chatman-kyiv.com → chatman-kyiv.com. Форма принимает заявки только с основного
-//    адреса, поэтому на www она бы не отправлялась.
+// 2. Запасные адреса сайта (www, служебный chatman-kyiv.pages.dev, адрес с точкой на конце)
+//    ведут на основной chatman-kyiv.com: только на нём работают счётчики и форма.
+//    Тестовые сборки веток (что-то.chatman-kyiv.pages.dev) не трогаем.
 // 3. Автоопределение языка: украинский браузер → / (uk), русский → /ru/ (ru).
 //    Срабатывает ТОЛЬКО на корневой документ (/ или /index.html), метод GET.
 //    /ru/..., статика и уже выбранный язык (cookie pref_lang) — не трогаем.
 
 const COOKIE_ATTRS = 'Path=/; Max-Age=31536000; SameSite=Lax';
 const MAIN_HOST = 'chatman-kyiv.com';
+// Запасные адреса того же сайта → 301 на основной (сравнение точное, без масок)
+const ALIAS_HOSTS = ['www.' + MAIN_HOST, 'chatman-kyiv.pages.dev'];
 
 // Что закрыто от посетителей. Проверяется уже раскодированный путь без повторов «/».
 const PRIVATE_PATHS = [
   /^\/worker(\/|$)/i,                       // исходник и настройки воркера заявок
   /^\/functions(\/|$)/i,                    // исходники функций сайта
   /^\/node_modules(\/|$)/i,
-  /(^|\/)\.(?!well-known(\/|$))[^\/]*/,     // .claude, .git, .env и любые dot-файлы (кроме /.well-known/)
+  /(^|\/)\.(?!well-known(\/|$))[A-Za-z0-9_][^\/]*/, // .claude, .git, .env и любые dot-файлы (кроме /.well-known/)
   /\.(md|toml|lock|map|log|bak|sh|ya?ml|env|ini)$/i,
   /(^|\/)package(-lock)?\.json$/i,
   /^\/images\/readme\.txt$/i,
@@ -43,8 +46,12 @@ export async function onRequest(context) {
     });
   }
 
-  // www → основной адрес (только чтение страниц; запросы к /api/ не трогаем)
-  if (url.hostname.toLowerCase() === 'www.' + MAIN_HOST && (request.method === 'GET' || request.method === 'HEAD')) {
+  // Запасной адрес → основной (только чтение страниц; запросы к /api/ не трогаем).
+  // «chatman-kyiv.com.» с точкой на конце — тот же сайт, но для браузера это другой адрес.
+  const rawHost = url.hostname.toLowerCase();
+  const host = rawHost.replace(/\.$/, '');
+  const isAlias = ALIAS_HOSTS.includes(host) || (host === MAIN_HOST && rawHost !== MAIN_HOST);
+  if (isAlias && (request.method === 'GET' || request.method === 'HEAD')) {
     return Response.redirect('https://' + MAIN_HOST + path + url.search, 301);
   }
 
@@ -52,6 +59,14 @@ export async function onRequest(context) {
   // Всё остальное (/ru/, /images, /favicon, /logo, /og-image,
   // /robots.txt, /sitemap.xml, /privacy.html и т.д.) проходит насквозь.
   const isRoot = path === '/' || path === '/index.html';
+
+  // Форма отправляется скриптом страницы. Если скрипт не сработал (выключен JavaScript),
+  // браузер шлёт форму сам, POST-ом на адрес страницы. Вместо пустой страницы с ошибкой 405
+  // возвращаем человека на ту же страницу. Данные формы при этом никуда не сохраняются.
+  if (request.method === 'POST' && (isRoot || path === '/ru/' || path === '/ru/index.html')) {
+    return Response.redirect(url.origin + path + url.search, 303);
+  }
+
   if (request.method !== 'GET' || !isRoot) {
     return next();
   }

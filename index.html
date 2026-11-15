@@ -1996,7 +1996,7 @@
       if (existingFbc) return;
       const fbc = `fb.1.${Date.now()}.${fbclid}`;
       const expires = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toUTCString();
-      document.cookie = `_fbc=${fbc}; expires=${expires}; path=/; SameSite=Lax`;
+      try { document.cookie = `_fbc=${fbc}; expires=${expires}; path=/; SameSite=Lax`; } catch (e) {}
     }
 
     captureFbclid();
@@ -2199,9 +2199,11 @@
     // COOKIE HELPER
     // ============================================
     function getCookie(name) {
-      const v = `; ${document.cookie}`;
-      const parts = v.split(`; ${name}=`);
-      if (parts.length === 2) return parts.pop().split(';').shift();
+      try { // cookie можуть бути недоступні — форма має працювати й без них
+        const v = `; ${document.cookie}`;
+        const parts = v.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop().split(';').shift();
+      } catch (e) {}
       return null;
     }
 
