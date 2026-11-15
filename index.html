@@ -67,8 +67,19 @@
        щойно мережеві скрипти завантажаться. Lead/конверсії не страждають. -->
   <script>
   (function () {
-    // GA4 + Google Ads — стандартна заглушка gtag (черга через dataLayer)
+    // Лічильники та пікселі вмикаються лише на адресі цього сайту (звірка контрольної суми
+    // імені хоста). На будь-якій іншій адресі сторінка працює як звичайно, але нічого
+    // не надсилає в аналітику та рекламні кабінети.
+    var own = false;
+    try {
+      var hn = String(location.hostname || '').toLowerCase().replace(/^www\./, ''), sum = 5381;
+      for (var k = 0; k < hn.length; k++) sum = ((sum << 5) + sum + hn.charCodeAt(k)) >>> 0;
+      own = sum === 3944226110;
+    } catch (e) {}
     window.dataLayer = window.dataLayer || [];
+    if (!own) { window.gtag = function () {}; window.fbq = function () {}; return; }
+
+    // GA4 + Google Ads — стандартна заглушка gtag (черга через dataLayer)
     window.gtag = function () { dataLayer.push(arguments); };
     gtag('js', new Date());
     gtag('config', 'G-8ST25GZQJL', { page_title: 'Чат-менеджер в офіс — Київ', page_location: window.location.href });
@@ -113,10 +124,6 @@
     setTimeout(loadTrackers, 3500);
   })();
   </script>
-  <noscript>
-    <img height="1" width="1" style="display:none"
-         src="https://www.facebook.com/tr?id=2160949541347107&ev=PageView&noscript=1"/>
-  </noscript>
 
   <!-- ═══ SCHEMA.ORG — JobPosting (Google for Jobs) ═══ -->
   <script type="application/ld+json">

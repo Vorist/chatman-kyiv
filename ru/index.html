@@ -67,8 +67,19 @@
        как только сетевые скрипты загрузятся. Lead/конверсии не страдают. -->
   <script>
   (function () {
-    // GA4 + Google Ads — стандартная заглушка gtag (очередь через dataLayer)
+    // Счётчики и пиксели включаются только на адресе этого сайта (сверка контрольной суммы
+    // имени хоста). На любом другом адресе страница работает как обычно, но ничего
+    // не отправляет в аналитику и рекламные кабинеты.
+    var own = false;
+    try {
+      var hn = String(location.hostname || '').toLowerCase().replace(/^www\./, ''), sum = 5381;
+      for (var k = 0; k < hn.length; k++) sum = ((sum << 5) + sum + hn.charCodeAt(k)) >>> 0;
+      own = sum === 3944226110;
+    } catch (e) {}
     window.dataLayer = window.dataLayer || [];
+    if (!own) { window.gtag = function () {}; window.fbq = function () {}; return; }
+
+    // GA4 + Google Ads — стандартная заглушка gtag (очередь через dataLayer)
     window.gtag = function () { dataLayer.push(arguments); };
     gtag('js', new Date());
     gtag('config', 'G-8ST25GZQJL', { page_title: 'Чат-менеджер в офис — Киев', page_location: window.location.href });
@@ -113,10 +124,6 @@
     setTimeout(loadTrackers, 3500);
   })();
   </script>
-  <noscript>
-    <img height="1" width="1" style="display:none"
-         src="https://www.facebook.com/tr?id=2160949541347107&ev=PageView&noscript=1"/>
-  </noscript>
 
   <!-- ═══ SCHEMA.ORG — JobPosting (Google for Jobs) ═══ -->
   <script type="application/ld+json">
