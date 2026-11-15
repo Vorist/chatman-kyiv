@@ -3,15 +3,16 @@
  *
  * Защита роута заявки (POST /):
  *   - Origin. Заявка принимается только со своих адресов: chatman-kyiv.com,
- *     www.chatman-kyiv.com, адреса из ALLOWED_ORIGIN (можно несколько через
- *     запятую) и предпросмотры Pages (chatman-kyiv.pages.dev и
- *     <ветка>.chatman-kyiv.pages.dev). Нет заголовка Origin или он чужой → 403.
+ *     www.chatman-kyiv.com и адреса из ALLOWED_ORIGIN (можно несколько через
+ *     запятую). Нет заголовка Origin или он чужой → 403. Тестовые сборки Pages
+ *     (*.pages.dev) заявку отправить не могут: пробная отправка оттуда создала бы
+ *     настоящую заявку в таблице и настоящую конверсию в Meta.
  *     В CORS-заголовке возвращается Origin самого запроса (плюс Vary: Origin),
  *     «*» не отдаётся никогда. Копия страницы на чужом домене заявку не отправит.
  *   - Лимит. Не больше 8 попыток с одного IP за 10 минут, дальше → 429.
  *     Счётчик лежит в том же KV. Нет IP или KV недоступен — лимит не применяется.
  *     На /status и /status/tiktok лимит не действует.
- *   - Тело. Читается как текст, больше 16 КБ → 413, принимается только JSON-объект.
+ *   - Тело. Читается как текст, больше 64 КБ → 413, принимается только JSON-объект.
  *   - Белый список. В Make уходят только известные поля формы и поля, которые
  *     добавляет сам воркер. Всё остальное отбрасывается.
  *   - Очистка значений (то, что пропускает проверка на странице, не отклоняется):
@@ -23,7 +24,9 @@
  *       если значение начинается с = + - @, перед ним ставится апостроф, чтобы
  *       Google Sheets не выполнил его как формулу. Рекламные идентификаторы
  *       (fbp, fbc, ttp, ttclid, gclid, gbraid, wbraid, fbclid, event_id,
- *       external_id) из одних [A-Za-z0-9._-] не трогаются совсем.
+ *       external_id) из одних [A-Za-z0-9._-] не трогаются совсем. Лимиты длины
+ *       взяты с запасом в несколько раз от самых длинных настоящих значений:
+ *       обрезанный идентификатор клика площадка уже не узнает.
  *
  * Дедупликация:
  *   - Проверяет телефон и телеграм в KV хранилище
@@ -34,10 +37,12 @@
  *   - Ошибка KV (чтение или запись) пишется в лог и заявку не останавливает
  *   - TTL записей: 90 дней
  *
- * Отправляет в 3 системы:
- *   1. Make.com webhook → Google Sheets + Telegram (ждём ответа, от него зависит ответ форме)
+ * Куда уходит заявка:
+ *   1. Make.com webhook → Google Sheets + Telegram (ждём ответа не дольше 20 секунд,
+ *      от него зависит ответ форме)
  *   2. Meta CAPI — только после успеха Make, в фоне; её ошибка на ответ форме не влияет
- *   3. TikTok Events API (в фоне — ответ форме его не ждёт)
+ *   3. TikTok Events API — только если задан TIKTOK_ACCESS_TOKEN (обычно не задан,
+ *      см. ниже); тоже после успеха Make и в фоне
  *
  * Роуты:
  *   POST /               — заявка с лендинга
@@ -47,8 +52,10 @@
  *
  * Секреты (wrangler secret put):
  *   MAKE_WEBHOOK_URL, FB_PIXEL_ID, FB_ACCESS_TOKEN, ALLOWED_ORIGIN
- *   TIKTOK_ACCESS_TOKEN  — токен Events API из TikTok Events Manager
  * Необязательные:
+ *   TIKTOK_ACCESS_TOKEN     — НЕ задавать без нужды: серверные события TikTok уже идут
+ *                             через Make → /api/tiktok. Если секрет задан, воркер шлёт
+ *                             Lead в TikTok сам, параллельно с Make.
  *   TIKTOK_PIXEL_CODE       — другой пиксель вместо зашитого ниже
  *   TIKTOK_TEST_EVENT_CODE  — код из вкладки Test Events (на время проверки)
  *   STATUS_KEY              — свой ключ для /status и /status/tiktok
@@ -66,11 +73,10 @@ const WORKER_VERSION = '2026-11-15-hardening';
 // ---- Защита роута заявки ----
 
 // Свои адреса сайта. Дополнительные задаются секретом ALLOWED_ORIGIN (через запятую).
+// Тестовых сборок Pages (*.pages.dev) здесь нет намеренно: см. шапку файла.
 const SITE_ORIGINS = ['https://chatman-kyiv.com', 'https://www.chatman-kyiv.com'];
-// Предпросмотры Cloudflare Pages этого проекта: сам проект и одна метка ветки/деплоя
-const PAGES_PREVIEW_RE = /^https:\/\/(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)?chatman-kyiv\.pages\.dev$/;
 
-const MAX_BODY_BYTES = 16 * 1024;      // тело заявки со всеми метками занимает 1–5 КБ
+const MAX_BODY_BYTES = 64 * 1024;      // тело заявки со всеми метками занимает 1–5 КБ
 const RATE_MAX_ATTEMPTS = 8;           // попыток с одного IP…
 const RATE_WINDOW_SECONDS = 10 * 60;   // …за 10 минут
 
@@ -87,12 +93,16 @@ const TEXT_FIELDS = [
 // Рекламные идентификаторы: по ним площадки находят клик, менять их нельзя
 const AD_ID_FIELDS = ['fbp', 'fbc', 'ttp', 'ttclid', 'gclid', 'gbraid', 'wbraid', 'fbclid', 'event_id', 'external_id'];
 const AD_ID_SAFE_RE = /^[A-Za-z0-9._-]+$/;
-// Ограничения длины; для остальных полей — TEXT_MAX_DEFAULT
-const TEXT_MAX = { ttclid: 2000, url: 1000, referrer: 1000, landing_page: 1000, user_agent: 500 };
-const TEXT_MAX_DEFAULT = 300;
+// Ограничения длины. Самые длинные настоящие значения в таблице лидов: fbclid 212,
+// fbc 220, gclid 92, referrer 649, landing_page 278 символов; user agent встроенных
+// браузеров — до 400–500. Лимиты в несколько раз выше, чтобы ничего настоящего не обрезать.
+const TEXT_MAX = { ttclid: 2000, url: 2000, referrer: 2000, landing_page: 2000, user_agent: 1000 };
+const AD_ID_MAX = 1000;       // остальные рекламные идентификаторы
+const TEXT_MAX_DEFAULT = 300; // utm_* и прочие строки
 
-// Управляющие и невидимые символы (в том числе табуляция и переводы строк)
-const CONTROL_CHARS_RE = /[\p{Cc}\p{Cf}\u2028\u2029]/gu;
+// Управляющие и невидимые символы (в том числе табуляция и переводы строк).
+// U+200C и U+200D оставлены: они бывают частью эмодзи в названии кампании.
+const CONTROL_CHARS_RE = /[\p{Cc}\u2028\u2029]|(?![\u200C\u200D])\p{Cf}/gu;
 // С этих символов таблица начинает читать ячейку как формулу (обычные и полноширинные)
 const FORMULA_LEAD_RE = /^[=+\-@\uFF1D\uFF0B\uFF0D\uFF20]/;
 
@@ -241,7 +251,8 @@ export default {
       timestamp: cleanTimestamp(field('timestamp')),
     };
     for (const key of TEXT_FIELDS) {
-      enriched[key] = cleanText(field(key), TEXT_MAX[key] || TEXT_MAX_DEFAULT, AD_ID_FIELDS.includes(key));
+      const isAdId = AD_ID_FIELDS.includes(key);
+      enriched[key] = cleanText(field(key), TEXT_MAX[key] || (isAdId ? AD_ID_MAX : TEXT_MAX_DEFAULT), isAdId);
     }
     enriched.phone_e164 = phoneE164;
     enriched.telegram_normalized = tgNormalized;
@@ -249,16 +260,7 @@ export default {
     enriched.received_at = new Date().toISOString();
     enriched.ip = String(request.headers.get('CF-Connecting-IP') || '').replace(/[^0-9A-Fa-f:.]/g, '').slice(0, 45);
     enriched.country = String(request.headers.get('CF-IPCountry') || '').replace(/[^A-Za-z0-9]/g, '').slice(0, 2).toUpperCase();
-    enriched.user_agent_server = cleanText(request.headers.get('User-Agent'), 500, false);
-
-    // TikTok Events API — в фоне: ответ форме не ждёт TikTok, и никакая
-    // ошибка TikTok не может повлиять на сохранение лида.
-    if (env.TIKTOK_ACCESS_TOKEN) {
-      const tiktokJob = sendToTikTok(env, enriched, request)
-        .then(() => console.log('TikTok EAPI: ok'))
-        .catch((e) => console.log('TikTok EAPI: failed', e && e.message));
-      if (ctx && typeof ctx.waitUntil === 'function') ctx.waitUntil(tiktokJob);
-    }
+    enriched.user_agent_server = cleanText(request.headers.get('User-Agent'), 1000, false);
 
     // Make — главный получатель: от него зависит, что увидит человек.
     try {
@@ -278,6 +280,15 @@ export default {
         kvPut(env, phoneKey, submittedAt, KV_TTL_SECONDS),
         kvPut(env, tgKey, submittedAt, KV_TTL_SECONDS),
       ]);
+    }
+
+    // TikTok Events API — только если задан токен; после успеха Make и в фоне:
+    // ответ форме не ждёт TikTok, и никакая ошибка TikTok не влияет на сохранение лида.
+    if (env.TIKTOK_ACCESS_TOKEN) {
+      const tiktokJob = sendToTikTok(env, enriched, request)
+        .then(() => console.log('TikTok EAPI: ok'))
+        .catch((e) => console.log('TikTok EAPI: failed', e && e.message));
+      if (ctx && typeof ctx.waitUntil === 'function') ctx.waitUntil(tiktokJob);
     }
 
     // Meta CAPI — после успеха Make и в фоне: ответ форме её не ждёт,
@@ -309,11 +320,11 @@ function json(data, status, headers = {}) {
 // ЗАЩИТА РОУТА ЗАЯВКИ
 // ========================================
 
-// Свой ли это адрес: основной сайт, www, список из ALLOWED_ORIGIN, предпросмотр Pages
+// Свой ли это адрес: основной сайт, www или адрес из списка ALLOWED_ORIGIN
 function isAllowedOrigin(origin, env) {
   if (!origin || origin === 'null' || origin.length > 200) return false;
   const o = origin.toLowerCase();
-  if (SITE_ORIGINS.includes(o) || PAGES_PREVIEW_RE.test(o)) return true;
+  if (SITE_ORIGINS.includes(o)) return true;
   for (const part of String(env.ALLOWED_ORIGIN || '').split(',')) {
     const allowed = part.trim().replace(/\/+$/, '').toLowerCase();
     // «*» и «null» в списке игнорируются: открыть приём заявок для всех нельзя
@@ -421,7 +432,9 @@ function cleanAge(value) {
 // Телефон: остаются только цифры и знаки, которыми пишут номер: + ( ) - пробел
 function cleanPhone(value) {
   if (typeof value !== 'string' && typeof value !== 'number') return '';
-  return String(value).slice(0, 40).replace(/[^\d+\-() ]/g, '').replace(/^[\s\-]+/, '').trim();
+  // Сначала убираем лишнее, потом ограничиваем длину: иначе номер, перед которым
+  // стоит длинная подпись, обрезался бы раньше, чем доходил до цифр.
+  return String(value).slice(0, 400).replace(/[^\d+\-() ]/g, '').replace(/^[\s\-]+/, '').trim().slice(0, 40);
 }
 
 // Телеграм: необязательная одна @ в начале и [A-Za-z0-9_], не длиннее 64 символов
@@ -613,6 +626,10 @@ async function sendToMake(url, data) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
+    // Если Make завис, человек не должен бесконечно смотреть на «Отправка…»: через
+    // 20 секунд форма получит ошибку и предложит повторить. Ключи дедупликации
+    // к этому моменту не записаны, поэтому повтор дойдёт до Make.
+    signal: AbortSignal.timeout(20000),
   });
   if (!res.ok) {
     const text = await res.text();
