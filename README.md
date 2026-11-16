@@ -132,7 +132,8 @@ npx wrangler secret put ALLOWED_ORIGIN
 Токен TikTok лежит только в этих двух сценариях Make (заголовок `X-TikTok-Token`).
 В коде, в репозитории и в Cloudflare его нет — не добавляй его туда: всё, что лежит
 в репозитории, доступно по адресу сайта. Секрет `TIKTOK_ACCESS_TOKEN` в Worker задавать
-не нужно: если задать, Worker начнёт слать `Lead` в TikTok сам, параллельно с Make.
+не нужно. Даже если он там есть (остался со старых времён), Worker в TikTok ничего не шлёт,
+пока явно не задано `TIKTOK_VIA_WORKER=1`: иначе `Lead` уходил бы в TikTok дважды, из Worker и из Make.
 
 Проверить, что выкатилась новая версия Worker: в ответе есть заголовок
 `X-Worker-Version` (например, `curl -i -X OPTIONS https://…workers.dev`).

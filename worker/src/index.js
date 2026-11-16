@@ -41,7 +41,8 @@
  *   1. Make.com webhook → Google Sheets + Telegram (ждём ответа не дольше 20 секунд,
  *      от него зависит ответ форме)
  *   2. Meta CAPI — только после успеха Make, в фоне; её ошибка на ответ форме не влияет
- *   3. TikTok Events API — только если задан TIKTOK_ACCESS_TOKEN (обычно не задан,
+ *   3. TikTok Events API — только если задан TIKTOK_ACCESS_TOKEN и явно включено
+ *      TIKTOK_VIA_WORKER=1 (обычно выключено,
  *      см. ниже); тоже после успеха Make и в фоне
  *
  * Роуты:
@@ -53,6 +54,9 @@
  * Секреты (wrangler secret put):
  *   MAKE_WEBHOOK_URL, FB_PIXEL_ID, FB_ACCESS_TOKEN, ALLOWED_ORIGIN
  * Необязательные:
+ *   TIKTOK_VIA_WORKER       — "1" включает отправку в TikTok из воркера. Без этого воркер
+ *                             в TikTok ничего не шлёт, даже если токен задан (в аккаунте
+ *                             остался старый токен, а события TikTok идут через Make).
  *   TIKTOK_ACCESS_TOKEN     — НЕ задавать без нужды: серверные события TikTok уже идут
  *                             через Make → /api/tiktok. Если секрет задан, воркер шлёт
  *                             Lead в TikTok сам, параллельно с Make.
@@ -287,7 +291,7 @@ export default {
 
     // TikTok Events API — только если задан токен; после успеха Make и в фоне:
     // ответ форме не ждёт TikTok, и никакая ошибка TikTok не влияет на сохранение лида.
-    if (env.TIKTOK_ACCESS_TOKEN) {
+    if (tiktokEnabled(env)) {
       const tiktokJob = sendToTikTok(env, enriched, request)
         .then(() => console.log('TikTok EAPI: ok'))
         .catch((e) => console.log('TikTok EAPI: failed', e && e.message));
@@ -709,6 +713,12 @@ async function sendToCAPI(env, data, request) {
 // TIKTOK EVENTS API  (POST /open_api/v1.3/event/track/, формат Events API 2.0)
 // ========================================
 
+// Воркер шлёт события в TikTok, только если это включено явно. Одного токена мало:
+// события TikTok идут через Make → /api/tiktok, второй отправитель дал бы дубли.
+function tiktokEnabled(env) {
+  return Boolean(env.TIKTOK_ACCESS_TOKEN) && String(env.TIKTOK_VIA_WORKER || '').trim() === '1';
+}
+
 function tiktokPixelCode(env) {
   return env.TIKTOK_PIXEL_CODE || TIKTOK_PIXEL_CODE;
 }
@@ -844,7 +854,7 @@ async function handleTikTokStatus(request, env, corsHeaders) {
   if (!(await statusKeyValid(request, env))) {
     return json({ error: 'Unauthorized' }, 401, corsHeaders);
   }
-  if (!env.TIKTOK_ACCESS_TOKEN) {
+  if (!tiktokEnabled(env)) {
     return json({ error: 'TikTok token not configured' }, 503, corsHeaders);
   }
 
