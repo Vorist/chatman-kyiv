@@ -2366,8 +2366,14 @@
       }
     }
 
+    // Апостроф у імені: айфон сам замінює звичайний ' на типографський ’ (а ще бувають ʼ ‘ ′ ` ´).
+    // Усі ці знаки приймаємо як звичайний апостроф. Решта перевірок імені не змінюється.
+    function normName(name) {
+      return String(name || '').replace(/[\u2019\u2018\u02BC\u2032\u0060\u00B4]/g, "'");
+    }
+
     function validateName(name) {
-      const v = (name || '').trim();
+      const v = normName(name).trim();
       if (!v) return 'Введіть ім\'я';
       if (v.length < 2) return 'Ім\'я занадто коротке';
       if (v.length > 50) return 'Занадто довге ім\'я';
@@ -2603,7 +2609,7 @@
       const eventId = `lead_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
 
       const payload = {
-        name: name.trim(),
+        name: normName(name).trim(),
         age: parseInt(age, 10),
         phone: phone.trim(),
         telegram: telegram.trim(),
