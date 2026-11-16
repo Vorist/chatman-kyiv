@@ -1364,21 +1364,31 @@
     .form-trust-note a { color: var(--muted); text-decoration: underline; }
 
     /* Value chips above the form (все екрани) */
+    /* Первый ряд: две короткие плашки поровну; длинные — каждая на всю ширину.
+       Если две короткие не помещаются в ряд (узкий экран), каждая встаёт на свою строку. */
     .mobile-offer {
       display: flex;
       flex-wrap: wrap;
-      gap: 8px;
-      margin-bottom: 18px;
+      gap: 6px;
+      margin-bottom: 16px;
     }
     .mobile-offer .chip {
-      font-size: 12px;
+      flex: 1 1 0;
+      min-width: max-content;
+      text-align: center;
+      font-size: 11.5px;
       font-weight: 500;
       background: var(--bg);
       border: 1px solid var(--line);
       border-radius: 100px;
-      padding: 7px 12px;
+      padding: 6px 9px;
       color: var(--ink-soft);
       white-space: nowrap;
+    }
+    .mobile-offer .chip-wide { flex-basis: 100%; }
+    /* Совсем узкие экраны (уже 300px): каждая плашка на всю ширину, текст переносится, а не вылезает */
+    @media (max-width: 300px) {
+      .mobile-offer .chip { flex-basis: 100%; min-width: 0; white-space: normal; }
     }
 
     /* Post-FAQ CTA band */
@@ -1543,9 +1553,9 @@
         <div class="form-card" id="form">
           <div class="mobile-offer">
             <span class="chip">🔞 Суворо від 18 років</span>
-            <span class="chip">🚫 Наркоманів не беремо</span>
-            <span class="chip">⛔ Військових і СЗЧ не беремо</span>
-            <span class="chip">🏢 НЕ ВІДДАЛЕНА РОБОТА</span>
+            <span class="chip">🏢 НЕ ВІДДАЛЕНКА</span>
+            <span class="chip chip-wide">🚫 Наркоманів не беремо</span>
+            <span class="chip chip-wide">⛔ Військових і СЗЧ не беремо</span>
           </div>
 
           <div class="form-badge">
