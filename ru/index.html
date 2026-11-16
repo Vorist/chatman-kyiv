@@ -67,6 +67,11 @@
        как только сетевые скрипты загрузятся. Lead/конверсии не страдают. -->
   <script>
   (function () {
+    // NOTICE: the analytics and ad-pixel IDs in this block belong to the ad accounts of the
+    // original site owner. They are enabled only on the original hostname (checksum below)
+    // and are stored bound to that hostname: on any other domain they decode to garbage.
+    // If you reuse this page on another domain: DELETE this whole block or put in YOUR OWN IDs.
+    // Do not just switch the check off — your visitors' data would go nowhere useful.
     // Счётчики и пиксели включаются только на адресе этого сайта (сверка контрольной суммы
     // имени хоста). На любом другом адресе страница работает как обычно, но ничего
     // не отправляет в аналитику и рекламные кабинеты.
@@ -79,17 +84,22 @@
     window.dataLayer = window.dataLayer || [];
     if (!own) { window.gtag = function () {}; window.fbq = function () {}; return; }
 
+    // Идентификаторы счётчиков хранятся «привязанными» к имени хоста: правильные значения
+    // получаются только на адресе этого сайта. Как заменить идентификатор — см. README, «Защита сайта».
+    function ownId(s) { for (var o = '', i = 0; i < s.length; i += 2) o += String.fromCharCode(parseInt(s.slice(i, i + 2), 16) ^ hn.charCodeAt((i >> 1) % hn.length)); return o; }
+    var GA_ID = ownId('2445592739535b6a3128233a'), AW_ID = ownId('223f4c4555505818594e50431e52'), FB_ID = ownId('51595744545557185f485a4219525f5a'), TT_ID = ownId('272a314221233c6e5c4e3c4317505b2429265844');
+
     // GA4 + Google Ads — стандартная заглушка gtag (очередь через dataLayer)
     window.gtag = function () { dataLayer.push(arguments); };
     gtag('js', new Date());
-    gtag('config', 'G-8ST25GZQJL', { page_title: 'Чат-менеджер в офис — Киев', page_location: window.location.href });
-    gtag('config', 'AW-18165279501');
+    gtag('config', GA_ID, { page_title: 'Чат-менеджер в офис — Киев', page_location: window.location.href });
+    gtag('config', AW_ID);
 
     // Meta Pixel — заглушка с очередью (без немедленной загрузки скрипта)
     !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
       n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
       n.push=n;n.loaded=!0;n.version='2.0';n.queue=[]}(window,document,'script');
-    fbq('init', '2160949541347107');
+    fbq('init', FB_ID);
     fbq('track', 'PageView');
 
     // TikTok — заглушка с очередью (load вызываем позже)
@@ -107,12 +117,12 @@
     function loadTrackers() {
       if (loaded) return; loaded = true;
       var g = document.createElement('script'); g.async = true;
-      g.src = 'https://www.googletagmanager.com/gtag/js?id=G-8ST25GZQJL';
+      g.src = 'https://www.googletagmanager.com/gtag/js?id=' + GA_ID;
       document.head.appendChild(g);
       var f = document.createElement('script'); f.async = true;
       f.src = 'https://connect.facebook.net/en_US/fbevents.js';
       document.head.appendChild(f);
-      try { if (window.ttq && ttq.load) { ttq.load('DBP6LBRC77U5934IJN90'); ttq.page(); } } catch (e) {}
+      try { if (window.ttq && ttq.load) { ttq.load(TT_ID); ttq.page(); } } catch (e) {}
     }
     var evs = ['scroll', 'pointerdown', 'keydown', 'touchstart', 'mousemove'];
     function onFirst() { evs.forEach(function (e) { window.removeEventListener(e, onFirst); }); loadTrackers(); }
@@ -138,7 +148,6 @@
       "value": "CHATMAN-KYIV-2026-001"
     },
     "datePosted": "2026-05-13",
-    "validThrough": "2026-08-31T23:59:59+03:00",
     "employmentType": "FULL_TIME",
     "directApply": true,
     "inLanguage": "ru",

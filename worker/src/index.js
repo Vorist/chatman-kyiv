@@ -135,6 +135,9 @@ export default {
     if (originAllowed) corsHeaders['Access-Control-Allow-Origin'] = origin;
 
     if (request.method === 'OPTIONS') {
+      // Браузер на чужом домене дальше этого запроса не идёт. Строка в логе покажет адрес
+      // копии страницы, которая всё ещё пытается слать заявки сюда.
+      if (!originAllowed && origin) console.log('Preflight rejected: origin', cleanText(origin, 120, false));
       return new Response(null, { status: originAllowed ? 200 : 403, headers: corsHeaders });
     }
 
