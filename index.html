@@ -87,7 +87,7 @@
     // Ідентифікатори лічильників зберігаються «прив'язаними» до імені хоста: правильні значення
     // виходять лише на адресі цього сайту. Як замінити ідентифікатор — див. README, «Защита сайта».
     function ownId(s) { for (var o = '', i = 0; i < s.length; i += 2) o += String.fromCharCode(parseInt(s.slice(i, i + 2), 16) ^ hn.charCodeAt((i >> 1) % hn.length)); return o; }
-    var GA_ID = ownId('2445592739535b6a3128233a'), AW_ID = ownId('223f4c4555505818594e50431e52'), FB_ID = ownId('51595744545557185f485a4219525f5a'), TT_ID = ownId('272a314221233c6e5c4e3c4317505b2429265844');
+    var GA_ID = ownId('2445592739535b6a3128233a'), AW_ID = ownId('223f4c4555505818594e50431e52'), FB_ID = ownId('51595744545557185f485a4219525f5a'), TT_ID = ownId('275f314358535d6e5c4e3c461c332454313a2944');
 
     // GA4 + Google Ads — стандартна заглушка gtag (черга через dataLayer)
     window.gtag = function () { dataLayer.push(arguments); };

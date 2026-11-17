@@ -72,7 +72,7 @@
 const KV_TTL_SECONDS = 90 * 24 * 60 * 60; // 90 дней
 
 // Версия кода — видна в заголовке X-Worker-Version любого ответа (проверка деплоя)
-const WORKER_VERSION = '2026-11-15-hardening';
+const WORKER_VERSION = '2026-11-17-tiktok-pixel';
 
 // ---- Защита роута заявки ----
 
@@ -111,7 +111,7 @@ const CONTROL_CHARS_RE = /[\p{Cc}\u2028\u2029]|(?![\u200C\u200D])\p{Cf}/gu;
 const FORMULA_LEAD_RE = /^[=+\-@\uFF1D\uFF0B\uFF0D\uFF20]/;
 
 // TikTok: код пикселя публичный (он же стоит в коде страницы), секрет — только токен
-const TIKTOK_PIXEL_CODE = 'DBP6LBRC77U5934IJN90';
+const TIKTOK_PIXEL_CODE = 'D7P7523C77U02PK9RRH0';
 const TIKTOK_API_URL = 'https://business-api.tiktok.com/open_api/v1.3/event/track/';
 
 // Ключ, которым сценарий Make подписывает запросы на /status/tiktok

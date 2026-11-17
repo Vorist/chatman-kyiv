@@ -10,7 +10,7 @@
 // собирает событие в правильном формате и пересылает его в TikTok.
 // Выкладывается сама вместе с сайтом (git push), ручной деплой не нужен.
 
-const TIKTOK_PIXEL_CODE = 'DBP6LBRC77U5934IJN90';
+const TIKTOK_PIXEL_CODE = 'D7P7523C77U02PK9RRH0';
 const TIKTOK_API_URL = 'https://business-api.tiktok.com/open_api/v1.3/event/track/';
 const SITE_URL = 'https://chatman-kyiv.com/';
 const MAX_BODY_CHARS = 20000;
