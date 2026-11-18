@@ -72,7 +72,7 @@
 const KV_TTL_SECONDS = 90 * 24 * 60 * 60; // 90 дней
 
 // Версия кода — видна в заголовке X-Worker-Version любого ответа (проверка деплоя)
-const WORKER_VERSION = '2026-11-17-tiktok-pixel';
+const WORKER_VERSION = '2026-11-18-meta-names';
 
 // ---- Защита роута заявки ----
 
@@ -645,10 +645,22 @@ async function sendToMake(url, data) {
   return res;
 }
 
+// Имя для Meta — по тем же правилам, что у пикселя в браузере (fbevents.js, normalizeName) и на сайте:
+// строчные буквы, без пробелов и ASCII-пунктуации; типографские апострофы (’ ‘ ʼ ′ ´) тоже убираем.
+// Первое слово — имя (fn), последнее — фамилия (ln). Раньше в fn уходило всё имя целиком
+// («мар'яна коваль»), и Meta не могла сопоставить его ни с одним профилем.
+const META_NAME_STRIP_RE = /[!"#$%&'()*+,\-./:;<=>?@ [\\\]^_`{|}~\s\u2019\u2018\u02BC\u2032\u00B4]+/g;
+function metaNameParts(name) {
+  const words = String(name || '').toLowerCase().split(/\s+/)
+    .map((w) => w.replace(META_NAME_STRIP_RE, ''))
+    .filter(Boolean);
+  return { fn: words[0] || null, ln: words.length > 1 ? words[words.length - 1] : null };
+}
+
 async function sendToCAPI(env, data, request) {
   const phoneDigits = data.phone_e164.replace(/\D/g, '');
   const phoneHash = await sha256(phoneDigits);
-  const nameHash = data.name ? await sha256(data.name.toLowerCase().trim()) : null;
+  const { fn, ln } = metaNameParts(data.name);
   const countryHash = await sha256('ua');
   const externalIdHash = data.external_id ? await sha256(data.external_id) : null;
 
@@ -659,7 +671,8 @@ async function sendToCAPI(env, data, request) {
     client_user_agent: data.user_agent || request.headers.get('User-Agent'),
   };
 
-  if (nameHash) userData.fn = [nameHash];
+  if (fn) userData.fn = [await sha256(fn)];
+  if (ln) userData.ln = [await sha256(ln)];
   if (externalIdHash) userData.external_id = [externalIdHash];
   if (data.fbp) userData.fbp = data.fbp;
 

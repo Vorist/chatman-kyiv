@@ -200,6 +200,7 @@ npx wrangler tail
 1. **Форма → Make** — зайди в Make сценарий, отправь заявку, убедись что в Google Sheets появилась строка
 2. **Форма → Meta Pixel** — Events Manager → Test Events → вставь свой домен → заполни форму → событие `Lead` должно прилететь
 3. **Форма → CAPI** — Events Manager → Overview → в графике `Lead` должны быть события с пометкой **Server** (не только Browser)
+   - **Ручной расширенный поиск совпадений (Advanced Matching).** Перед браузерным `Lead` страница передаёт пикселю телефон, имя, фамилию, `external_id` и страну (`window.fbSetUserData` в начале страницы, `metaUserData` рядом с `handleSuccess`). Пиксель сам приводит их к правилам Meta и хеширует SHA-256: в сеть уходят только хеши. Воркер шлёт в CAPI те же `fn`/`ln` по тем же правилам (`metaNameParts`): строчные буквы, без пробелов и знаков препинания, первое слово имени — `fn`, последнее — `ln`. Если меняешь правило в одном месте, поменяй и во втором, иначе хеши браузера и сервера разойдутся. Проверка: Events Manager → событие `Lead` → «Ключи соответствия» (Event Match Quality): у браузерных событий появятся телефон, имя, фамилия и external ID
 4. **Форма → TikTok** — TikTok Events Manager → пиксель → Test Events: событие `Lead` должно прийти и из браузера, и с сервера (Events API) с одинаковым `event_id`. Для серверной проверки добавь в запрос на `/api/tiktok` поле `test_event_code` с кодом со вкладки Test Events
 5. **Lighthouse** — Chrome DevTools → Lighthouse → Run audit. Цель: 90+ по всем параметрам
 

@@ -101,6 +101,9 @@
       n.push=n;n.loaded=!0;n.version='2.0';n.queue=[]}(window,document,'script');
     fbq('init', FB_ID);
     fbq('track', 'PageView');
+    // Ручний розширений пошук збігів Meta (Advanced Matching): перед подією Lead форма передає сюди
+    // телефон, ім'я та external_id. Піксель сам нормалізує їх і хешує SHA-256, у мережу йдуть лише хеші.
+    window.fbSetUserData = function (ud) { try { fbq('init', FB_ID, ud); } catch (e) {} };
 
     // TikTok — заглушка з чергою (load викликаємо пізніше)
     !function (w, d, t) {
@@ -2660,7 +2663,7 @@
         }
 
         trackSubmitAttempt('success');
-        handleSuccess(eventId, null, '+' + phone.replace(/\D/g, ''));
+        handleSuccess(eventId, null, '+' + phone.replace(/\D/g, ''), payload.name);
 
       } catch (err) {
         console.error(err);
@@ -2674,7 +2677,29 @@
       }
     });
 
-    function handleSuccess(eventId, customMessage, phoneE164) {
+    // Дані для ручного розширеного пошуку збігів Meta. Правила ті самі, що в самого пікселя
+    // (fbevents.js) і у воркера: малі літери, без пробілів і ASCII-розділових знаків;
+    // перше слово імені — fn, останнє — ln. Телефон — лише цифри з кодом країни.
+    const META_NAME_STRIP_RE = /[!"#$%&'()*+,\-./:;<=>?@ [\\\]^_`{|}~\s]+/g;
+    function metaUserData(phoneE164, fullName) {
+      const ud = {};
+      const digits = String(phoneE164 || '').replace(/\D/g, '');
+      if (digits) ud.ph = digits;
+      if (digits.indexOf('380') === 0) ud.country = 'ua';
+      const words = normName(fullName).toLowerCase().split(/\s+/)
+        .map(function (w) { return w.replace(META_NAME_STRIP_RE, ''); })
+        .filter(Boolean);
+      if (words.length) ud.fn = words[0];
+      if (words.length > 1) ud.ln = words[words.length - 1];
+      if (externalId) ud.external_id = externalId;
+      return ud;
+    }
+    // Будь-яка помилка тут глушиться: подія Lead і сама форма від цього не залежать.
+    function setMetaUserData(phoneE164, fullName) {
+      try { if (typeof window.fbSetUserData === 'function') window.fbSetUserData(metaUserData(phoneE164, fullName)); } catch (e) {}
+    }
+
+    function handleSuccess(eventId, customMessage, phoneE164, fullName) {
       formFunnel.submitted = true;
       formWrapper.style.display = 'none';
       formSuccess.classList.add('active');
@@ -2692,6 +2717,7 @@
       if (!customMessage) {
         if (typeof fbq === 'function' && !firedEvents.has('Lead')) {
           firedEvents.add('Lead');
+          setMetaUserData(phoneE164, fullName);
           fbq('track', 'Lead', {
             content_name: 'Chat Manager Kyiv',
             content_category: 'HR Lead',
