@@ -2017,6 +2017,10 @@
 
     captureFbclid();
     const externalId = getOrCreateExternalId();
+    // Хеш external_id для Meta считаем сразу: в Meta уходит только хеш (тот же, что шлёт воркер),
+    // как бы её скрипт ни обращался с сырыми значениями. Без crypto.subtle external_id просто не передаём.
+    let externalIdHash = '';
+    try { sha256Hex(externalId).then(function (h) { externalIdHash = h; }, function () {}); } catch (e) {}
 
     // ============================================
     // АТРИБУЦИЯ ЛИДА — first-touch, хранится в localStorage
@@ -2673,19 +2677,20 @@
 
     // Данные для ручного расширенного поиска совпадений Meta. Правила те же, что у самого пикселя
     // (fbevents.js) и у воркера: строчные буквы, без пробелов и ASCII-знаков препинания;
-    // первое слово имени — fn, последнее — ln. Телефон — только цифры с кодом страны.
+    // первое слово имени — fn, последнее — ln. Телефон — +380… с плюсом: без плюса пиксель в браузерах
+    // с немецким, ивритом и т. п. дописывает к номеру код «своей» страны.
     const META_NAME_STRIP_RE = /[!"#$%&'()*+,\-./:;<=>?@ [\\\]^_`{|}~\s]+/g;
     function metaUserData(phoneE164, fullName) {
       const ud = {};
       const digits = String(phoneE164 || '').replace(/\D/g, '');
-      if (digits) ud.ph = digits;
+      if (digits) ud.ph = '+' + digits;
       if (digits.indexOf('380') === 0) ud.country = 'ua';
       const words = normName(fullName).toLowerCase().split(/\s+/)
         .map(function (w) { return w.replace(META_NAME_STRIP_RE, ''); })
         .filter(Boolean);
       if (words.length) ud.fn = words[0];
       if (words.length > 1) ud.ln = words[words.length - 1];
-      if (externalId) ud.external_id = externalId;
+      if (externalIdHash) ud.external_id = externalIdHash;
       return ud;
     }
     // Любая ошибка здесь глушится: событие Lead и сама форма от этого не зависят.
@@ -2709,26 +2714,31 @@
       try { localStorage.setItem('lead_submitted', 'true'); } catch(e) {}
 
       if (!customMessage) {
-        if (typeof fbq === 'function' && !firedEvents.has('Lead')) {
-          firedEvents.add('Lead');
-          setMetaUserData(phoneE164, fullName);
-          fbq('track', 'Lead', {
-            content_name: 'Chat Manager Kyiv',
-            content_category: 'HR Lead',
-            value: 4.00,
-            currency: 'USD'
-          }, { eventID: eventId });
-          console.log('[Meta Event] Lead', { eventID: eventId });
-        }
-        if (typeof gtag === 'function') {
-          gtag('event', 'generate_lead', {
-            currency: 'USD',
-            value: 4.0,
-            event_id: eventId,
-            content_name: 'Chat Manager Kyiv'
-          });
-          console.log('[GA4] generate_lead', { event_id: eventId });
-        }
+        // Ошибка любого счётчика не должна превращать сохранённую заявку в «Не удалось отправить»
+        try {
+          if (typeof fbq === 'function' && !firedEvents.has('Lead')) {
+            firedEvents.add('Lead');
+            setMetaUserData(phoneE164, fullName);
+            fbq('track', 'Lead', {
+              content_name: 'Chat Manager Kyiv',
+              content_category: 'HR Lead',
+              value: 4.00,
+              currency: 'USD'
+            }, { eventID: eventId });
+            console.log('[Meta Event] Lead', { eventID: eventId });
+          }
+        } catch (e) {}
+        try {
+          if (typeof gtag === 'function') {
+            gtag('event', 'generate_lead', {
+              currency: 'USD',
+              value: 4.0,
+              event_id: eventId,
+              content_name: 'Chat Manager Kyiv'
+            });
+            console.log('[GA4] generate_lead', { event_id: eventId });
+          }
+        } catch (e) {}
         trackTikTokLead(eventId, phoneE164);
       }
 
