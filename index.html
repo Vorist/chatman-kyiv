@@ -1610,7 +1610,7 @@
               </div>
 
               <div class="form-row">
-                <label class="form-label" for="readiness">Коли готові зустрітися / переїхати?</label>
+                <label class="form-label" for="readiness">Коли зручно зустрітися на&nbsp;співбесіду?</label>
                 <select id="readiness" name="readiness" class="form-select" required>
                   <option value="" disabled selected>Оберіть варіант</option>
                   <option value="2_days">Протягом 2&nbsp;днів</option>
@@ -2606,7 +2606,7 @@
       }
 
       let extraInvalid = false;
-      if (!readiness) { setFieldError('readiness', 'readinessError', 'Оберіть, коли вам зручно поговорити'); extraInvalid = true; }
+      if (!readiness) { setFieldError('readiness', 'readinessError', 'Оберіть, коли вам зручно зустрітися'); extraInvalid = true; }
       else { setFieldError('readiness', 'readinessError', null); }
       if (!consent) { setFieldError('consent', 'consentError', 'Поставте позначку, щоб ми могли зв\'язатися'); extraInvalid = true; }
       else { setFieldError('consent', 'consentError', null); }

@@ -1604,7 +1604,7 @@
               </div>
 
               <div class="form-row">
-                <label class="form-label" for="readiness">Когда готовы встретиться / переехать?</label>
+                <label class="form-label" for="readiness">Когда удобно встретиться на&nbsp;собеседование?</label>
                 <select id="readiness" name="readiness" class="form-select" required>
                   <option value="" disabled selected>Выберите вариант</option>
                   <option value="2_days">В течение 2&nbsp;дней</option>
@@ -2600,7 +2600,7 @@
       }
 
       let extraInvalid = false;
-      if (!readiness) { setFieldError('readiness', 'readinessError', 'Выберите, когда вам удобно поговорить'); extraInvalid = true; }
+      if (!readiness) { setFieldError('readiness', 'readinessError', 'Выберите, когда вам удобно встретиться'); extraInvalid = true; }
       else { setFieldError('readiness', 'readinessError', null); }
       if (!consent) { setFieldError('consent', 'consentError', 'Поставьте, пожалуйста, эту галочку, чтобы мы могли связаться'); extraInvalid = true; }
       else { setFieldError('consent', 'consentError', null); }
